@@ -1,0 +1,378 @@
+:root {
+  /* ── Surfaces ── */
+  --tg-bg-base: #0a0e17;
+  --tg-bg-raised: #111827;
+  --tg-bg-overlay: #1a2235;
+  --tg-bg-input: #0d1220;
+
+  /* ── Borders ── */
+  --tg-border: #1e293b;
+  --tg-border-strong: #334155;
+
+  /* ── Text ── */
+  --tg-text-primary: #e2e8f0;
+  --tg-text-secondary: #94a3b8;
+  --tg-text-muted: #64748b;
+
+  /* ── Accent (ice blue) ── */
+  --tg-accent: #0ea5e9;
+  --tg-accent-hover: #38bdf8;
+  --tg-accent-muted: rgba(14, 165, 233, 0.15);
+
+  /* ── Semantic ── */
+  --tg-success: #22c55e;
+  --tg-warning: #eab308;
+  --tg-danger: #ef4444;
+  --tg-danger-hover: #dc2626;
+  --tg-danger-muted: rgba(239, 68, 68, 0.15);
+
+  /* ── Spacing ── */
+  --tg-space-xs: 0.25rem;
+  --tg-space-sm: 0.5rem;
+  --tg-space-md: 0.75rem;
+  --tg-space-lg: 1rem;
+  --tg-space-xl: 1.5rem;
+  --tg-space-2xl: 2rem;
+
+  /* ── Radii ── */
+  --tg-radius-sm: 4px;
+  --tg-radius-md: 6px;
+  --tg-radius-lg: 8px;
+
+  /* ── Typography ── */
+  --tg-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --tg-font-xs: 0.75rem;
+  --tg-font-sm: 0.8125rem;
+  --tg-font-base: 0.875rem;
+  --tg-font-lg: 1rem;
+  --tg-font-xl: 1.25rem;
+  --tg-font-2xl: 1.5rem;
+
+  /* ── Easing ── */
+  --tg-ease: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--tg-font-family);
+  font-size: var(--tg-font-base);
+  color: var(--tg-text-primary);
+  background: var(--tg-bg-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Shared UI classes ── */
+
+.tg-input {
+  padding: var(--tg-space-sm) var(--tg-space-md);
+  background: var(--tg-bg-input);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-md);
+  color: var(--tg-text-primary);
+  font-size: var(--tg-font-base);
+  font-family: var(--tg-font-family);
+  outline: none;
+  transition: border-color 0.15s var(--tg-ease);
+}
+
+.tg-input:focus {
+  border-color: var(--tg-accent);
+}
+
+.tg-input::placeholder {
+  color: var(--tg-text-muted);
+}
+
+.tg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--tg-space-sm);
+  padding: var(--tg-space-sm) var(--tg-space-lg);
+  border: 1px solid transparent;
+  border-radius: var(--tg-radius-md);
+  font-size: var(--tg-font-sm);
+  font-family: var(--tg-font-family);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s var(--tg-ease);
+  outline: none;
+}
+
+.tg-btn:focus-visible {
+  outline: 2px solid var(--tg-accent);
+  outline-offset: 2px;
+}
+
+.tg-btn-primary {
+  background: var(--tg-accent);
+  color: #fff;
+}
+
+.tg-btn-primary:hover {
+  background: var(--tg-accent-hover);
+}
+
+.tg-btn-danger {
+  background: var(--tg-danger-muted);
+  color: var(--tg-danger);
+  border-color: var(--tg-danger);
+}
+
+.tg-btn-danger:hover {
+  background: var(--tg-danger);
+  color: #fff;
+}
+
+.tg-btn-ghost {
+  background: transparent;
+  color: var(--tg-text-secondary);
+  border-color: var(--tg-border);
+}
+
+.tg-btn-ghost:hover {
+  background: var(--tg-bg-overlay);
+  color: var(--tg-text-primary);
+}
+
+.tg-card {
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius-lg);
+  padding: var(--tg-space-xl);
+}
+
+.tg-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--tg-space-sm);
+  background: var(--tg-accent-muted);
+  color: var(--tg-accent);
+  border-radius: var(--tg-radius-sm);
+  font-size: var(--tg-font-xs);
+  font-weight: 500;
+}
+
+.tg-badge-danger {
+  background: var(--tg-danger-muted);
+  color: var(--tg-danger);
+}
+
+/* ── Form layout ── */
+
+.tg-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-lg);
+}
+
+.tg-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-xs);
+}
+
+.tg-form-label {
+  font-size: var(--tg-font-xs);
+  font-weight: 600;
+  color: var(--tg-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tg-form-hint {
+  color: var(--tg-text-secondary);
+  font-size: var(--tg-font-sm);
+  margin: 0;
+}
+
+.tg-form-error {
+  color: var(--tg-danger);
+  font-size: var(--tg-font-sm);
+  margin: 0;
+}
+
+.tg-error {
+  color: var(--tg-danger);
+  font-size: var(--tg-font-sm);
+}
+
+.tg-input[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tg-form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--tg-space-sm);
+  font-size: var(--tg-font-sm);
+  color: var(--tg-text-secondary);
+  cursor: pointer;
+}
+
+.tg-form-checkbox:has(input[disabled]) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tg-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--tg-space-sm);
+}
+
+/* ── Data table ── */
+
+.tg-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--tg-radius-lg);
+  background: var(--tg-bg-raised);
+  border: 1px solid var(--tg-border);
+}
+
+.tg-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tg-table th {
+  text-align: left;
+  font-size: var(--tg-font-xs);
+  font-weight: 600;
+  color: var(--tg-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--tg-space-sm) var(--tg-space-md);
+  border-bottom: 1px solid var(--tg-border-strong);
+}
+
+.tg-table td {
+  padding: var(--tg-space-md);
+  border-bottom: 1px solid var(--tg-border);
+  font-size: var(--tg-font-sm);
+}
+
+.tg-table-actions {
+  display: flex;
+  gap: var(--tg-space-xs);
+}
+
+/* ── Empty state ── */
+
+.tg-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--tg-space-lg);
+  padding: var(--tg-space-2xl) var(--tg-space-xl);
+  text-align: center;
+}
+
+.tg-empty-icon {
+  font-size: 2.5rem;
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+.tg-empty-text {
+  color: var(--tg-text-muted);
+  font-size: var(--tg-font-sm);
+  max-width: 280px;
+  line-height: 1.6;
+}
+
+/* ── Effective access lists ── */
+
+.tg-access-section-title {
+  font-size: var(--tg-font-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tg-text-secondary);
+  margin: var(--tg-space-md) 0 var(--tg-space-sm);
+}
+
+.tg-access-section-title:first-child {
+  margin-top: 0;
+}
+
+.tg-access-section-title--added {
+  color: var(--tg-success);
+}
+
+.tg-access-section-title--removed {
+  color: var(--tg-danger);
+}
+
+.tg-access-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tg-space-xs);
+}
+
+.tg-access-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--tg-space-sm);
+}
+
+.tg-access-item-name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.tg-access-item-meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--tg-space-sm);
+  white-space: nowrap;
+}
+
+.tg-access-item-policy {
+  color: var(--tg-text-secondary);
+  font-size: var(--tg-font-sm);
+}
+
+.tg-access-item-group {
+  font-size: var(--tg-font-xs);
+  white-space: nowrap;
+}
+
+.tg-access-note {
+  color: var(--tg-text-secondary);
+  font-size: var(--tg-font-sm);
+  overflow-wrap: anywhere;
+}
+
+/* A Guarded Group a confirm would empty (access-diff confirm, group delete). */
+.tg-guarded-group-warning {
+  margin: 0 0 var(--tg-space-md);
+  padding: var(--tg-space-sm) var(--tg-space-md);
+  border: 1px solid var(--tg-warning);
+  border-radius: var(--tg-radius-md);
+  background: rgba(234, 179, 8, 0.12);
+  color: var(--tg-text-primary);
+  font-size: var(--tg-font-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

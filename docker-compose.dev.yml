@@ -1,0 +1,21 @@
+# Local development against a throwaway users database: put a
+# users_database.yml under ./dev-authelia-config (gitignored) and run
+#   TEGATA_ADMIN_PASSWORD_HASH='$argon2id$...' docker compose -f docker-compose.dev.yml up --build
+# then open http://localhost:3100. OIDC is unset, so the break-glass password
+# login is the only door — which is the point of a dev box.
+services:
+  tegata:
+    build: .
+    ports:
+      - '3100:3000'
+    environment:
+      - TEGATA_ADMIN_PASSWORD_HASH=${TEGATA_ADMIN_PASSWORD_HASH}
+      - TEGATA_JWT_SECRET=dev-secret-change-me
+      - TEGATA_DB_PATH=/data/tegata.db
+      - AUTHELIA_USERS_FILE=/authelia-config/users_database.yml
+    volumes:
+      - tegata-data:/data
+      - ./dev-authelia-config:/authelia-config
+
+volumes:
+  tegata-data:

@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+.env
+
+# Local development state (docker-compose.dev.yml, `pnpm dev`)
+backend/tegata.db*
+backend/users_database.yml
+dev-authelia-config/
+
+.idea/
+.vscode/
+.DS_Store
+.claude

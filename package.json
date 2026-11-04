@@ -1,0 +1,25 @@
+{
+  "name": "tegata",
+  "private": true,
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build:shared": "pnpm --filter @tegata/shared run build",
+    "dev": "pnpm build:shared && pnpm --filter @tegata/shared --filter tegata-backend --filter tegata-frontend --parallel run dev",
+    "build": "pnpm build:shared && pnpm --filter tegata-backend --filter tegata-frontend run build",
+    "test": "pnpm build:shared && pnpm --filter tegata-backend --filter tegata-frontend --parallel run test",
+    "test:cov": "pnpm build:shared && pnpm --filter tegata-backend --filter tegata-frontend --parallel run test:cov",
+    "typecheck": "pnpm build:shared && pnpm --filter @tegata/shared --filter tegata-backend --filter tegata-frontend run typecheck",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "boot-check": "sh scripts/boot-check.sh \"node backend/dist/main.js\" http://localhost:3000/api/health",
+    "build:docker": "docker build -t tegata:latest ."
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "10.0.0",
+    "eslint": "10.14.0",
+    "typescript": "6.0.3"
+  }
+}

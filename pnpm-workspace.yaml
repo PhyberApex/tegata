@@ -1,0 +1,21 @@
+# Matches the security:minimumReleaseAgeNpm preset (3 days) so a frozen-lockfile
+# install never rejects an entry Renovate was willing to open a PR for.
+minimumReleaseAge: 4320
+minimumReleaseAgeExcludePrune: true
+trustPolicy: no-downgrade
+shellEmulator: true
+
+packages:
+  - backend
+  - frontend
+  - shared
+
+# Only the two native modules the backend needs may run their install scripts;
+# everything else is installed without executing anything.
+allowBuilds:
+  '@nestjs/core': true
+  '@swc/core': false
+  argon2: true
+  better-sqlite3: true
+  esbuild: true
+  unrs-resolver: false

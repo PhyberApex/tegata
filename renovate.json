@@ -1,0 +1,36 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "docker:pinDigests",
+    "security:minimumReleaseAgeNpm"
+  ],
+  "packageRules": [
+    {
+      "description": "Minor and patch updates merge themselves once the checks pass",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest",
+        "pin",
+        "pinDigest"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "docker-compose.yml is the usage example and names this repo's own image on purpose; bumping it there would only ever point readers at a stale digest",
+      "matchPackageNames": [
+        "ghcr.io/phyberapex/tegata"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "A dependency or base-image bump changes the published image, so it is a fix: release-please cuts a patch release for it. Workflow-action bumps stay chores and release nothing.",
+      "matchManagers": [
+        "dockerfile",
+        "npm"
+      ],
+      "semanticCommitType": "fix"
+    }
+  ]
+}

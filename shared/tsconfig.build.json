@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Every tegata root script builds this package before it runs, and CI's
+    // build step does so while test and typecheck are already reading dist/:
+    // incremental makes an unchanged rebuild write nothing, so nothing reads a
+    // half-written file. The buildinfo lives in dist/ so the two are deleted
+    // together — a buildinfo outliving its outputs would skip the emit.
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+  }
+}

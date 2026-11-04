@@ -1,0 +1,40 @@
+# Tegata next to the Authelia it manages, both behind one reverse proxy.
+# Only Tegata is shown in full; Authelia's own service, Traefik and the
+# network are whatever your deployment already has. The matching Authelia
+# client block is in README.md, "Authelia configuration".
+services:
+  tegata:
+    image: ghcr.io/phyberapex/tegata:1.0.0
+    container_name: tegata
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+      - TEGATA_DB_PATH=/data/tegata.db
+      - AUTHELIA_USERS_FILE=/authelia-config/users_database.yml
+      - AUTHELIA_CONFIG_FILE=/authelia-config/configuration.yml
+    volumes:
+      - tegata-data:/data
+      # The same directory Authelia mounts, read-write: Tegata is the writer
+      # of users_database.yml and only ever reads configuration.yml.
+      - ./authelia/config:/authelia-config
+    # Tegata shares Authelia's root-owned 0600 users_database.yml, so it runs
+    # as uid 0 like Authelia does; what root can do is cut down instead: no
+    # capabilities, no privilege escalation, and nothing writable outside the
+    # two mounts and /tmp.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.tegata.rule=Host(`tegata.example.com`)
+      - traefik.http.routers.tegata.entrypoints=websecure
+      - traefik.http.routers.tegata.tls.certresolver=letsencrypt
+      - traefik.http.services.tegata.loadbalancer.server.port=3000
+    restart: unless-stopped
+
+volumes:
+  tegata-data:

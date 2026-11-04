@@ -1,0 +1,50 @@
+name: Checks
+
+on:
+  workflow_call:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm run lint
+      - name: Type check
+        run: pnpm run typecheck
+      - name: Test
+        run: pnpm run test
+      - name: Build
+        run: pnpm run build
+      # Boots the built backend the way the image's CMD does and probes
+      # /api/health the way its HEALTHCHECK does: the unit specs construct
+      # every class by hand, so this is the one step that exercises the real
+      # dependency graph and a fresh-database start. The password hash is
+      # never verified at boot, only on a login attempt, so a placeholder is
+      # fine; the two paths point at an empty temp dir, which starts empty.
+      - name: Boot check
+        env:
+          TEGATA_JWT_SECRET: boot-check-secret
+          TEGATA_ADMIN_PASSWORD_HASH: boot-check-placeholder-hash
+          TEGATA_DB_PATH: ${{ runner.temp }}/tegata-boot/tegata.db
+          AUTHELIA_USERS_FILE: ${{ runner.temp }}/tegata-boot/users_database.yml
+        run: |
+          mkdir -p "$RUNNER_TEMP/tegata-boot"
+          pnpm run boot-check
+      - name: Build the image
+        run: docker build -t tegata:ci .

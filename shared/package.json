@@ -1,0 +1,27 @@
+{
+  "name": "@tegata/shared",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The wire types tegata's backend serves and its frontend reads",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "!dist/.tsbuildinfo",
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}
