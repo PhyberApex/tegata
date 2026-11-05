@@ -175,7 +175,8 @@ export class UsersService implements OnModuleInit {
 
     // Write-then-rename keeps the swap atomic so Authelia's file watcher never reloads a partial file
     const tmpPath = `${this.filePath}.tmp`
-    writeFileSync(tmpPath, content, 'utf-8')
+    // 0600 at creation so the argon2 hashes are never readable by others, even briefly or on a fresh install
+    writeFileSync(tmpPath, content, { encoding: 'utf-8', mode: 0o600 })
     if (existsSync(this.filePath))
       chmodSync(tmpPath, statSync(this.filePath).mode & 0o777)
     renameSync(tmpPath, this.filePath)
