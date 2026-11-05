@@ -156,6 +156,8 @@ open — it is open on purpose.
 | `TEGATA_DB_PATH` | no | `/data/tegata.db` | SQLite file for groups, invites, tokens, bundles, the baseline hash |
 | `GUARDED_GROUPS` | no | — | comma-separated groups the Enabled-Count Guard also refuses to empty, e.g. `admins` |
 | `ACCESS_PREVIEW_OPEN_POLICIES` | no | — | comma-separated OIDC authorization policies left open on purpose |
+| `PORT` | no | `3000` | TCP port the backend listens on; a non-numeric or out-of-range value refuses to boot |
+| `HOST` | no | `0.0.0.0` | address the backend binds to |
 | `NATIVE_LOGIN_CIDRS` | no | `10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8` | IPv4 or IPv6 CIDRs (e.g. `fd00::/8`) the password login answers from; `::1` is always admitted; a malformed entry refuses to boot |
 | `PUBLIC_URL` | for email | `http://localhost:5173` | what the links in outgoing emails start with |
 | `SMTP_HOST` | for email | — | unset disables email delivery entirely |
