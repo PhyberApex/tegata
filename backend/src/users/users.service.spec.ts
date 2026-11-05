@@ -381,6 +381,28 @@ describe('usersService', () => {
         parallelism: 4,
       }))
     })
+
+    it('should hash with the ARGON2_* parameters from config', async () => {
+      const config = {
+        get: vi.fn((key: string, defaultVal?: string) => ({ ARGON2_MEMORY_KIB: '19456', ARGON2_ITERATIONS: '2', ARGON2_PARALLELISM: '1' } as Record<string, string>)[key] ?? defaultVal ?? ''),
+      }
+      const tuned = new UsersService(config as unknown as ConfigService, mockGroupsService as unknown as GroupsService, {
+        instance: { prepare: mockPrepare },
+      } as unknown as DatabaseService)
+
+      await tuned.createUser('new', 'New', 'new@test.com', 'mypassword', [])
+
+      expect(hashMock).toHaveBeenCalledWith('mypassword', expect.objectContaining({ memoryCost: 19456, timeCost: 2, parallelism: 1 }))
+    })
+
+    it('should refuse to construct with invalid ARGON2_* values', () => {
+      const config = {
+        get: vi.fn((key: string, defaultVal?: string) => key === 'ARGON2_ITERATIONS'
+          ? 'x'
+          : defaultVal ?? ''),
+      }
+      expect(() => new UsersService(config as unknown as ConfigService, mockGroupsService as unknown as GroupsService, {} as unknown as DatabaseService)).toThrow(/ARGON2_ITERATIONS/)
+    })
   })
 
   describe('updateUser', () => {
