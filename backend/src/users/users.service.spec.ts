@@ -143,6 +143,25 @@ users:
       - users
 `
 
+const USERS_YAML_WITH_EXTRA_KEYS = `
+users:
+  alice:
+    displayname: Alice Smith
+    password: "$argon2id$hash1"
+    email: alice@example.com
+    given_name: Alice
+    groups:
+      - admins
+    extra:
+      locale: de
+  bob:
+    displayname: Bob Jones
+    password: "$argon2id$hash2"
+    email: bob@example.com
+    groups:
+      - users
+`
+
 function enoentError(): NodeJS.ErrnoException {
   const err = new Error('ENOENT: no such file or directory') as NodeJS.ErrnoException
   err.code = 'ENOENT'
@@ -504,6 +523,18 @@ describe('usersService', () => {
       expect(written).toContain('$argon2id$hash1')
     })
 
+    it('should preserve unknown per-user keys such as extra and given_name', () => {
+      readFileSyncMock.mockReturnValue(USERS_YAML_WITH_EXTRA_KEYS)
+
+      service.updateUser('alice', { displayname: 'Alice Updated' })
+
+      const written = yaml.load(writeFileSyncMock.mock.calls[0][1] as string) as any
+      expect(written.users.alice.displayname).toBe('Alice Updated')
+      expect(written.users.alice.extra).toEqual({ locale: 'de' })
+      expect(written.users.alice.given_name).toBe('Alice')
+      expect(written.users.bob.extra).toBeUndefined()
+    })
+
     it('should not touch disabled when the field is omitted', () => {
       readFileSyncMock.mockReturnValue(USERS_YAML_WITH_DISABLED)
 
@@ -521,6 +552,18 @@ describe('usersService', () => {
 
       expect(hashMock).toHaveBeenCalledWith('newpass99', expect.anything())
       expect(writeFileSyncMock).toHaveBeenCalled()
+    })
+
+    it('should preserve unknown per-user keys such as extra and given_name', async () => {
+      readFileSyncMock.mockReturnValue(USERS_YAML_WITH_EXTRA_KEYS)
+      hashMock.mockResolvedValue('$argon2id$resethash')
+
+      await service.resetPassword('alice', 'newpass99')
+
+      const written = yaml.load(writeFileSyncMock.mock.calls[0][1] as string) as any
+      expect(written.users.alice.password).toBe('$argon2id$resethash')
+      expect(written.users.alice.extra).toEqual({ locale: 'de' })
+      expect(written.users.alice.given_name).toBe('Alice')
     })
 
     it('should throw NotFoundException for unknown user', async () => {
