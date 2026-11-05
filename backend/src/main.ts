@@ -1,10 +1,12 @@
 import process from 'node:process'
 import { ValidationPipe } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import { AppModule } from './app.module'
 import { DynamicLogger, installFetchLogger, setDynamicLoggerInstance } from './common'
+import { parseTrustProxy } from './config/parse-trust-proxy'
 import { parseListenPort } from './listen-port'
 
 async function bootstrap() {
@@ -19,8 +21,11 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule, { logger })
 
-  // Trust one proxy hop (Traefik) so req.protocol reads X-Forwarded-Proto correctly
-  app.getHttpAdapter().getInstance().set('trust proxy', 1)
+  const trustProxy = parseTrustProxy(app.get(ConfigService).get<string>('TRUST_PROXY'))
+
+  // How many hops (or which addresses) between the client and Tegata to trust, so req.ip and
+  // req.protocol read the forwarded headers correctly
+  app.getHttpAdapter().getInstance().set('trust proxy', trustProxy)
 
   app.use(helmet())
   app.use(cookieParser())
