@@ -164,11 +164,16 @@ open — it is open on purpose.
 | `SMTP_PORT` | no | `587` | |
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | no | — | both or neither |
 | `SMTP_SENDER` | no | `Tegata <noreply@example.com>` | the From header |
+| `TRUST_PROXY` | no | `1` | the hops between the client and Tegata: a count (`2`), IPs/CIDRs (`10.0.0.0/8,172.16.0.0/12`) or `loopback`/`linklocal`/`uniquelocal`; an empty or unparseable value refuses to boot |
 | `NODE_ENV` | no | — | `production` sets the `Secure` flag on cookies; set it |
 
-Tegata trusts exactly one proxy hop for `X-Forwarded-For`, so `req.ip` under your reverse
-proxy is the client's address — which is what the login fence judges. With no proxy in front
-it is the socket address.
+By default Tegata trusts exactly one proxy hop for `X-Forwarded-For`, so `req.ip` under your
+reverse proxy is the client's address — which is what the login fence judges. With no proxy in
+front it is the socket address. Behind more than one hop (Cloudflare, or Nginx Proxy Manager plus
+Tailscale), set `TRUST_PROXY` to the hop count or to the addresses of your proxies. A wrong value
+changes who the fence admits: too low and `req.ip` is an inner proxy, which may sit on a private
+address and let everyone in; too high lets a caller spoof their address with their own
+`X-Forwarded-For`. With no proxy in front, set `TRUST_PROXY=0`.
 
 ## Development
 
