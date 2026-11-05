@@ -21,6 +21,13 @@ interface UsersDatabase {
   users: Record<string, AutheliaUser>
 }
 
+/** Own-key lookup: usernames like `constructor` or `__proto__` must not resolve to Object.prototype members. */
+function lookupUser(users: Record<string, AutheliaUser>, username: string): AutheliaUser | undefined {
+  return Object.hasOwn(users, username)
+    ? users[username]
+    : undefined
+}
+
 /**
  * The Unreadable Users Database state (CONTEXT.md): a missing file only counts as "start empty" before any
  * Baseline Hash has ever been recorded (fresh install). Once a row exists, a missing file is unreadable just
@@ -146,12 +153,12 @@ export class UsersService implements OnModuleInit {
   }
 
   private assertUsernameFree(db: UsersDatabase, username: string): void {
-    if (db.users[username])
+    if (lookupUser(db.users, username))
       throw new ConflictException(`User "${username}" already exists`)
   }
 
   private findUserOrThrow(db: UsersDatabase, username: string): AutheliaUser {
-    const user = db.users[username]
+    const user = lookupUser(db.users, username)
     if (!user)
       throw new NotFoundException(`User "${username}" not found`)
     return user
@@ -307,7 +314,7 @@ export class UsersService implements OnModuleInit {
     return {
       ...users,
       [username]: {
-        ...users[username],
+        ...lookupUser(users, username)!,
         ...updates,
       },
     }
@@ -368,7 +375,7 @@ export class UsersService implements OnModuleInit {
    * write (e.g. Reset Token redemption), and "user no longer exists" would be misleading in that state.
    */
   userExists(username: string): boolean {
-    return Boolean(this.readDatabaseOrThrow().users[username])
+    return Boolean(lookupUser(this.readDatabaseOrThrow().users, username))
   }
 
   /**
@@ -377,12 +384,12 @@ export class UsersService implements OnModuleInit {
    * see a 503, not be told its account is gone.
    */
   isEnabledUser(username: string): boolean {
-    const user = this.readDatabaseOrThrow().users[username]
-    return Boolean(user) && !user.disabled
+    const user = lookupUser(this.readDatabaseOrThrow().users, username)
+    return user !== undefined && !user.disabled
   }
 
   getUser(username: string): { username: string, displayname: string, email: string, groups: string[], disabled: boolean } | null {
-    const user = this.readDatabase().users[username]
+    const user = lookupUser(this.readDatabase().users, username)
     return user
       ? this.toPublicUser(username, user)
       : null
@@ -406,12 +413,18 @@ export class UsersService implements OnModuleInit {
 
     this.mutateDatabase((db) => {
       this.assertUsernameFree(db, username)
-      db.users[username] = {
-        displayname,
-        password: passwordHash,
-        email,
-        groups,
-      }
+      // defineProperty, not assignment: `db.users['__proto__'] = …` would swap the prototype instead.
+      Object.defineProperty(db.users, username, {
+        value: {
+          displayname,
+          password: passwordHash,
+          email,
+          groups,
+        },
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      })
     })
     this.logger.debug(`User created: ${username} (groups: ${groups.join(', ')})`)
     return { username, displayname, email, groups }
@@ -507,7 +520,7 @@ export class UsersService implements OnModuleInit {
   previewGroupRemoval(group: string): { members: string[], emptiedGroups: string[] } {
     const users = this.readDatabaseOrThrow().users
     return {
-      members: Object.keys(users).filter(username => users[username].groups?.includes(group)).sort(),
+      members: Object.keys(users).filter(username => lookupUser(users, username)?.groups?.includes(group)).sort(),
       emptiedGroups: this.computeEmptiedGroups(users, this.withoutGroup(users, group)),
     }
   }
@@ -524,7 +537,7 @@ export class UsersService implements OnModuleInit {
 
   /** Throws instead of resolving false when the database is unreadable — see {@link userExists}. */
   async verifyPassword(username: string, password: string): Promise<boolean> {
-    const user = this.readDatabaseOrThrow().users[username]
+    const user = lookupUser(this.readDatabaseOrThrow().users, username)
     if (!user)
       return false
 

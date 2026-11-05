@@ -618,6 +618,40 @@ describe('usersService', () => {
     })
   })
 
+  describe('object.prototype member names as usernames', () => {
+    const NAMES = [
+      'constructor',
+      '__proto__',
+      'hasOwnProperty',
+      'toString',
+    ]
+
+    it.each(NAMES)('should not resolve %s to a user on a database without it', (name) => {
+      readFileSyncMock.mockReturnValue('users: {}\n')
+
+      expect(service.userExists(name)).toBe(false)
+      expect(service.isEnabledUser(name)).toBe(false)
+      expect(service.getUser(name)).toBeNull()
+    })
+
+    it.each(NAMES)('should create %s and round-trip it through YAML', async (name) => {
+      readFileSyncMock.mockReturnValue('users: {}\n')
+
+      await service.createUser(name, 'Odd', 'odd@test.com', 'password123', ['users'])
+
+      const written = writeFileSyncMock.mock.calls[0][1] as string
+      readFileSyncMock.mockReturnValue(written)
+      expect(service.getUser(name)).toMatchObject({ username: name, displayname: 'Odd' })
+    })
+
+    it('should report NotFound rather than mutating Object when resetting the password of "constructor"', async () => {
+      readFileSyncMock.mockReturnValue('users: {}\n')
+
+      await expect(service.resetPassword('constructor', 'newpassword1')).rejects.toThrow(NotFoundException)
+      expect((Object as any).password).toBeUndefined()
+    })
+  })
+
   describe('getUser', () => {
     it('should return the user when found', () => {
       expect(service.getUser('alice')).toEqual({
