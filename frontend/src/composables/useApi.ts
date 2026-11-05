@@ -13,7 +13,7 @@ export function isEnabledCountGuardError(err: unknown): err is ApiError {
 }
 
 /** Endpoints where a 401 means bad credentials or a bad token, not an expired session. */
-const SESSION_AGNOSTIC_URL = /^\/api\/(?:auth\/|invites\/[^/]+\/(?:validate|redeem)$|reset-tokens\/[^/]+\/(?:validate|redeem)$|profile\/password$)/
+const CREDENTIAL_OR_TOKEN_URL = /^\/api\/(?:auth\/|invites\/[^/]+\/(?:validate|redeem)$|reset-tokens\/[^/]+\/(?:validate|redeem)$|profile\/password$)/
 
 function endSession() {
   authenticated.value = false
@@ -31,7 +31,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   })
 
   if (!res.ok) {
-    if (res.status === 401 && !SESSION_AGNOSTIC_URL.test(url))
+    if (res.status === 401 && !CREDENTIAL_OR_TOKEN_URL.test(url))
       endSession()
     const body = await res.json().catch(() => ({ message: res.statusText }))
     throw new ApiError(body.message || res.statusText, res.status, body)
