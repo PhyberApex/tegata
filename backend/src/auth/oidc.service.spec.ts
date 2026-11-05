@@ -228,3 +228,23 @@ describe('oidcService.exchangeCode', () => {
     expect(calledUrls().filter(url => url.endsWith('/.well-known/openid-configuration'))).toHaveLength(1)
   })
 })
+
+describe('oidcService.buildAuthorizationUrl', () => {
+  // Authelia may be down at the first SSO attempt; a failed discovery must not stick.
+  it('retries discovery after a failed attempt instead of caching the rejection', async () => {
+    respondAs({
+      token: tokenResponse(),
+      userinfo: () => jsonResponse({ sub: 'user-sub' }),
+    })
+    const healthy = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementationOnce(() => Promise.reject(new Error('connect ECONNREFUSED')))
+    fetchMock.mockImplementation(healthy)
+    const service = createService()
+
+    await expect(service.buildAuthorizationUrl()).rejects.toThrow()
+    const { url } = await service.buildAuthorizationUrl()
+
+    expect(url).toContain(`${ISSUER}/api/oidc/authorization`)
+    expect(calledUrls().filter(u => u.endsWith('/.well-known/openid-configuration'))).toHaveLength(2)
+  })
+})
