@@ -188,12 +188,17 @@ export class UsersService implements OnModuleInit {
     return createHash('sha256').update(content).digest('hex')
   }
 
-  private readRawFile(): string | null {
+  /** `null` for any read failure; `missing` tells a plain ENOENT apart from other errors. */
+  private readRawFile(): { content: string | null, missing: boolean } {
     try {
-      return readFileSync(this.filePath, 'utf-8')
+      return {
+        content: readFileSync(this.filePath, 'utf-8'),
+        missing: false,
+      }
     }
-    catch {
-      return null
+    catch (err) {
+      const missing = err instanceof Error && 'code' in err && err.code === 'ENOENT'
+      return { content: null, missing }
     }
   }
 
@@ -235,12 +240,15 @@ export class UsersService implements OnModuleInit {
    */
   private detectOutOfBandEdit(): boolean {
     const row = this.getIntegrityRow()
-    if (!row)
-      return true
+    if (!row) {
+      // Fresh install: no baseline and no file is the documented "start empty" state, not tampering.
+      // A file that exists without a baseline (post-upgrade seeding) still needs acknowledging.
+      return !this.readRawFile().missing
+    }
     if (row.mismatch_detected)
       return true
 
-    const current = this.readRawFile()
+    const { content: current } = this.readRawFile()
     if (current === null)
       return true
 
@@ -266,7 +274,10 @@ export class UsersService implements OnModuleInit {
   }
 
   acceptDatabaseBaseline(): void {
-    const current = this.readRawFile()
+    const { content: current, missing } = this.readRawFile()
+    // Nothing to baseline on a fresh install; the first write records one.
+    if (missing && !this.getIntegrityRow())
+      return
     if (current === null)
       throw new NotFoundException('Users database file could not be read')
     this.acceptBaselineHash(this.hashContent(current))
