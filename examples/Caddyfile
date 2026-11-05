@@ -1,0 +1,6 @@
+# Caddy in front of Tegata. Caddy obtains the certificate itself; run it on the
+# same docker network as the tegata container (use 127.0.0.1:3000 instead if
+# Tegata publishes its port on the host). One proxy hop: TRUST_PROXY=1.
+tegata.example.com {
+	reverse_proxy tegata:3000
+}

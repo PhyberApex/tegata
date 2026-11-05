@@ -1,0 +1,13 @@
+# Traefik labels for Tegata, as an override of the main file:
+#   docker compose -f docker-compose.yml -f examples/docker-compose.traefik.yml up -d
+# Adjust the host, entrypoint and cert resolver to your Traefik, and put Tegata
+# on Traefik's network. Keep TRUST_PROXY=1 (one hop: Traefik).
+services:
+  tegata:
+    image: ghcr.io/phyberapex/tegata:1.0.0
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.tegata.rule=Host(`tegata.example.com`)
+      - traefik.http.routers.tegata.entrypoints=websecure
+      - traefik.http.routers.tegata.tls.certresolver=letsencrypt
+      - traefik.http.services.tegata.loadbalancer.server.port=3000

@@ -93,6 +93,7 @@ services:
     env_file: .env
     environment:
       - NODE_ENV=production
+      - TRUST_PROXY=1
       - TEGATA_DB_PATH=/data/tegata.db
       - AUTHELIA_USERS_FILE=/authelia-config/users_database.yml
       - AUTHELIA_CONFIG_FILE=/authelia-config/configuration.yml
@@ -106,8 +107,12 @@ services:
     restart: unless-stopped
 ```
 
-[`docker-compose.yml`](docker-compose.yml) is the full example with Traefik labels;
-[`.env.example`](.env.example) lists every variable with a comment. The two volumes are the
+Any TLS-terminating reverse proxy works; Tegata listens on port 3000 and needs nothing proxy-specific.
+[`docker-compose.yml`](docker-compose.yml) is the full, proxy-agnostic example.
+[`examples/docker-compose.traefik.yml`](examples/docker-compose.traefik.yml) adds Traefik labels as an
+override (`docker compose -f docker-compose.yml -f examples/docker-compose.traefik.yml up -d`), and
+[`examples/Caddyfile`](examples/Caddyfile) shows Caddy proxying to `tegata:3000`. Set `TRUST_PROXY`
+to the number of proxies in front (see below). [`.env.example`](.env.example) lists every variable with a comment. The two volumes are the
 whole integration: Tegata needs read-write access to the directory Authelia mounts its
 configuration from, and a place for its own SQLite file.
 
