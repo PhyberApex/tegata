@@ -206,6 +206,15 @@ describe('parseTrustedNetworks', () => {
 })
 
 describe('parseIpv6Network', () => {
+  it('refuses a network inside the IPv4-mapped range, which could never match', () => {
+    expect(parseIpv6Network('::ffff:10.0.0.0/104')).toBeNull()
+  })
+
+  it('reads :: and 1:: ', () => {
+    expect(parseIpv6Network('::/0')).toEqual([0n, 0])
+    expect(parseIpv6Network('1::')).toEqual([1n << 112n, 128])
+  })
+
   it('reads a CIDR, masking host bits off', () => {
     expect(parseIpv6Network('fd12:3456::1/8')).toEqual([0xFD00n << 112n, 8])
   })

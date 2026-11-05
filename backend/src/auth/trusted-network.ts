@@ -128,6 +128,10 @@ export function parseIpv6Network(entry: string): Ipv6Network | null {
   if (prefixPart !== undefined && (prefixPart !== String(prefix) || prefix < 0 || prefix > IPV6_BITS))
     return null
 
+  // A mapped source is matched as IPv4, so a network inside ::ffff:0:0/96 could never match.
+  if (prefix >= 96 && address >> 32n === IPV4_MAPPED_PREFIX)
+    return null
+
   return [address & maskFor6(prefix), prefix]
 }
 
