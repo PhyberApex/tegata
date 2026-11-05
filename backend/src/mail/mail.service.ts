@@ -30,7 +30,7 @@ export class MailService {
     const host = this.config.get<string>('SMTP_HOST')
     this.sender = this.config.get<string>('SMTP_SENDER', 'Tegata <noreply@example.com>')
     this.siteName = this.config.get<string>('SITE_NAME', 'Tegata') || 'Tegata'
-    this.publicUrl = this.config.get<string>('PUBLIC_URL', 'http://localhost:5173').replace(/\/$/, '')
+    this.publicUrl = this.resolvePublicUrl(host)
 
     if (!host) {
       this.logger.warn('SMTP_HOST not set — email delivery is disabled')
@@ -57,6 +57,36 @@ export class MailService {
       greetingTimeout: 10_000,
       socketTimeout: 10_000,
     })
+  }
+
+  private resolvePublicUrl(smtpHost: string | undefined): string {
+    const explicit = this.config.get<string>('PUBLIC_URL')
+    if (explicit)
+      return this.parseHttpOrigin('PUBLIC_URL', explicit, true)
+
+    if (!smtpHost)
+      return ''
+
+    const redirectUri = this.config.get<string>('OIDC_REDIRECT_URI')
+    if (!redirectUri) {
+      throw new Error('SMTP_HOST is set but PUBLIC_URL is not. Set PUBLIC_URL (e.g. https://tegata.example.com) or OIDC_REDIRECT_URI so email links can be built.')
+    }
+    return this.parseHttpOrigin('OIDC_REDIRECT_URI', redirectUri, false)
+  }
+
+  private parseHttpOrigin(name: string, value: string, keepPath: boolean): string {
+    let url: URL
+    try {
+      url = new URL(value)
+    }
+    catch {
+      throw new Error(`${name} must be an absolute http(s) URL, got "${value}"`)
+    }
+    if (url.protocol !== 'http:' && url.protocol !== 'https:')
+      throw new Error(`${name} must be an absolute http(s) URL, got "${value}"`)
+    return keepPath
+      ? value.replace(/\/$/, '')
+      : url.origin
   }
 
   async sendInviteEmail(input: InviteEmailInput): Promise<MailResult> {
