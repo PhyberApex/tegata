@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1
-FROM node:24-alpine AS frontend-build
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
+FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS frontend-build
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
@@ -16,7 +16,7 @@ COPY frontend/ frontend/
 RUN pnpm --filter @tegata/shared run build
 RUN pnpm --filter tegata-frontend run build
 
-FROM node:24-alpine AS backend-build
+FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS backend-build
 WORKDIR /app
 RUN apk add --no-cache python3 make g++
 RUN corepack enable
@@ -39,7 +39,7 @@ RUN pnpm --filter tegata-backend run build
 RUN --mount=type=cache,id=pnpm-tegata,target=/root/.local/share/pnpm/store \
     pnpm --filter tegata-backend deploy --prod --legacy /deploy
 
-FROM node:24-alpine
+FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85
 WORKDIR /app
 # The backend resolves the frontend as ../../frontend/dist from its own dist,
 # so the deployed tree keeps the workspace layout.
