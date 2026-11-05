@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import { siteName } from '../composables/useSiteName'
 import LoginView from './LoginView.vue'
 
 function jsonResponse(body: unknown, status = 200) {
@@ -14,10 +15,10 @@ function jsonResponse(body: unknown, status = 200) {
 const fetchMock = vi.fn()
 
 /** The backend decides which doors this client is offered; the card never guesses. */
-function respondWithMethods(nativePasswordLogin: boolean) {
+function respondWithMethods(nativePasswordLogin: boolean, siteName?: string) {
   fetchMock.mockImplementation((url: string) => {
     if (url === '/api/auth/methods')
-      return Promise.resolve(jsonResponse({ nativePasswordLogin }))
+      return Promise.resolve(jsonResponse({ nativePasswordLogin, siteName }))
     return Promise.resolve(jsonResponse({ success: true }))
   })
 }
@@ -47,6 +48,7 @@ async function mountView(initialRoute = '/login') {
 }
 
 beforeEach(() => {
+  siteName.value = 'Tegata'
   vi.stubGlobal('fetch', fetchMock)
 })
 
@@ -57,6 +59,24 @@ afterEach(() => {
 })
 
 describe('loginView', () => {
+  it('titles the card and the tab with the configured SITE_NAME', async () => {
+    respondWithMethods(false, 'Example Family SSO')
+
+    const wrapper = await mountView()
+
+    expect(wrapper.find('.login-title').text()).toBe('Example Family SSO')
+    expect(document.title).toBe('Example Family SSO - User Management')
+    expect(wrapper.find('.login-powered').text()).toContain('Tegata')
+  })
+
+  it('keeps the Tegata title when the backend sends no site name', async () => {
+    respondWithMethods(false)
+
+    const wrapper = await mountView()
+
+    expect(wrapper.find('.login-title').text()).toBe('Tegata')
+  })
+
   it('always offers SSO as the primary action', async () => {
     respondWithMethods(false)
 

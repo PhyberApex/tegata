@@ -24,10 +24,12 @@ export class MailService {
   private readonly transporter: nodemailer.Transporter | null
   private readonly sender: string
   private readonly publicUrl: string
+  private readonly siteName: string
 
   constructor(private config: ConfigService) {
     const host = this.config.get<string>('SMTP_HOST')
     this.sender = this.config.get<string>('SMTP_SENDER', 'Tegata <noreply@example.com>')
+    this.siteName = this.config.get<string>('SITE_NAME', 'Tegata') || 'Tegata'
     this.publicUrl = this.config.get<string>('PUBLIC_URL', 'http://localhost:5173').replace(/\/$/, '')
 
     if (!host) {
@@ -67,8 +69,8 @@ export class MailService {
 
     return this.deliver(
       input.to,
-      'You\'ve been invited',
-      `${greeting}\n\nYou've been invited to register. Use the link below to set up your account:\n\n${url}\n\nThis link grants membership in: ${groups}\nIt expires on ${expiry}.`,
+      `You've been invited to join ${this.siteName}`,
+      `${greeting}\n\nYou've been invited to join ${this.siteName}. Use the link below to set up your account:\n\n${url}\n\nThis link grants membership in: ${groups}\nIt expires on ${expiry}.`,
     )
   }
 
@@ -80,8 +82,8 @@ export class MailService {
 
     return this.deliver(
       input.to,
-      'Password reset requested',
-      `${greeting}\n\nA password reset was requested for your account. Use the link below to set a new password:\n\n${url}\n\nIf you didn't request this, you can ignore this email.`,
+      `Password reset for your ${this.siteName} account`,
+      `${greeting}\n\nA password reset was requested for your ${this.siteName} account. Use the link below to set a new password:\n\n${url}\n\nIf you didn't request this, you can ignore this email.`,
     )
   }
 

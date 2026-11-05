@@ -79,6 +79,51 @@ describe('mailService', () => {
     })
   })
 
+  describe('when SITE_NAME is configured', () => {
+    const invite = {
+      to: 'a@test.com',
+      displayname: 'Alice',
+      token: 'tok-1',
+      groups: ['users'],
+      expiresAt: '2099-01-01T00:00:00.000Z',
+    }
+
+    it('should name the site in the invite subject and body', async () => {
+      nodemailerMock.sendMail.mockResolvedValue(undefined)
+      const service = await buildService({ SMTP_HOST: 'smtp.example.com', SITE_NAME: 'Example Family SSO' })
+
+      await service.sendInviteEmail(invite)
+
+      expect(nodemailerMock.sendMail).toHaveBeenCalledWith(expect.objectContaining({
+        subject: 'You\'ve been invited to join Example Family SSO',
+        text: expect.stringContaining('invited to join Example Family SSO.'),
+      }))
+    })
+
+    it('should name the site in the reset subject and body', async () => {
+      nodemailerMock.sendMail.mockResolvedValue(undefined)
+      const service = await buildService({ SMTP_HOST: 'smtp.example.com', SITE_NAME: 'Example Family SSO' })
+
+      await service.sendResetEmail({ to: 'b@test.com', displayname: 'Bob', token: 'tok-2' })
+
+      expect(nodemailerMock.sendMail).toHaveBeenCalledWith(expect.objectContaining({
+        subject: 'Password reset for your Example Family SSO account',
+        text: expect.stringContaining('for your Example Family SSO account.'),
+      }))
+    })
+
+    it('should default to Tegata when unset', async () => {
+      nodemailerMock.sendMail.mockResolvedValue(undefined)
+      const service = await buildService({ SMTP_HOST: 'smtp.example.com' })
+
+      await service.sendInviteEmail(invite)
+
+      expect(nodemailerMock.sendMail).toHaveBeenCalledWith(expect.objectContaining({
+        subject: 'You\'ve been invited to join Tegata',
+      }))
+    })
+  })
+
   describe('when SMTP_HOST is configured', () => {
     it('should send the invite email and return sentAt on success', async () => {
       nodemailerMock.sendMail.mockResolvedValue(undefined)

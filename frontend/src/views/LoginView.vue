@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { useAuth } from '../composables/useAuth'
+import { siteName } from '../composables/useSiteName'
 
 const { login } = useAuth()
 const api = useApi()
@@ -25,8 +26,10 @@ const ssoError = computed(() => {
 
 onMounted(async () => {
   try {
-    const methods = await api.get<{ nativePasswordLogin: boolean }>('/api/auth/methods')
+    const methods = await api.get<{ nativePasswordLogin: boolean, siteName?: string }>('/api/auth/methods')
     nativePasswordLogin.value = methods.nativePasswordLogin
+    if (methods.siteName)
+      siteName.value = methods.siteName
   }
   catch {
     nativePasswordLogin.value = false
@@ -56,7 +59,7 @@ async function handleLogin() {
       <div class="login-brand">
         <span class="login-logo">&#x624B;&#x5F62;</span>
         <h1 class="login-title">
-          Tegata
+          {{ siteName }}
         </h1>
         <p class="login-subtitle">
           User Management
@@ -112,6 +115,10 @@ async function handleLogin() {
           {{ loading ? 'Authenticating...' : 'Unlock' }}
         </button>
       </form>
+
+      <p class="login-powered">
+        Powered by Tegata
+      </p>
     </div>
   </div>
 </template>
@@ -156,6 +163,13 @@ async function handleLogin() {
   color: var(--tg-text-muted);
   font-size: var(--tg-font-sm);
   margin: var(--tg-space-xs) 0 0;
+}
+
+.login-powered {
+  color: var(--tg-text-muted);
+  font-size: var(--tg-font-xs);
+  margin: 0;
+  text-align: center;
 }
 
 .login-breakglass {

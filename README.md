@@ -164,6 +164,7 @@ open — it is open on purpose.
 | `SMTP_PORT` | no | `587` | |
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | no | — | both or neither |
 | `SMTP_SENDER` | no | `Tegata <noreply@example.com>` | the From header |
+| `SITE_NAME` | no | `Tegata` | the name shown in invite and reset emails, the login, register and reset pages, and the browser tab |
 | `TRUST_PROXY` | no | `1` | the hops between the client and Tegata: a count (`2`), IPs/CIDRs (`10.0.0.0/8,172.16.0.0/12`) or `loopback`/`linklocal`/`uniquelocal`; an empty or unparseable value refuses to boot |
 | `NODE_ENV` | no | — | `production` sets the `Secure` flag on cookies; set it |
 
