@@ -1,5 +1,6 @@
 import { ref, watchEffect } from 'vue'
 import { useApi } from './useApi'
+import { usernamePattern } from './useRegisterForm'
 
 const DEFAULT_SITE_NAME = 'Tegata'
 
@@ -15,9 +16,11 @@ export function useSiteName() {
 
   async function loadSiteName() {
     try {
-      const methods = await api.get<{ siteName?: string }>('/api/auth/methods')
+      const methods = await api.get<{ siteName?: string, usernamePattern?: string }>('/api/auth/methods')
       if (methods.siteName)
         siteName.value = methods.siteName
+      if (methods.usernamePattern)
+        usernamePattern.value = methods.usernamePattern
     }
     catch {
       // Branding is cosmetic; keep the default name rather than surface an error.

@@ -8,6 +8,9 @@ defineProps<{
   minlength?: number
   /** Set by the invite: read-only, dimmed, and tagged so the user knows why. */
   locked?: boolean
+  hint?: string
+  /** Renders the hint as an error. */
+  invalid?: boolean
 }>()
 
 const value = defineModel<string>({ required: true })
@@ -31,6 +34,9 @@ const value = defineModel<string>({ required: true })
       :readonly="locked"
       required
     >
+    <p v-if="hint" :class="invalid ? 'tg-form-error' : 'tg-form-hint'" :role="invalid ? 'alert' : undefined">
+      {{ hint }}
+    </p>
   </div>
 </template>
 

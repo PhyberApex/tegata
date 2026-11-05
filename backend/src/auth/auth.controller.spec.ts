@@ -100,11 +100,11 @@ describe('authController', () => {
 
   describe('methods', () => {
     it('should offer native password login to a caller inside the fence', () => {
-      expect(controller.methods({ ip: '192.168.1.42' } as any)).toEqual({ nativePasswordLogin: true, siteName: 'Tegata' })
+      expect(controller.methods({ ip: '192.168.1.42' } as any)).toEqual({ nativePasswordLogin: true, usernamePattern: '^[a-z0-9][a-z0-9._-]{0,63}$', siteName: 'Tegata' })
     })
 
     it('should withhold native password login from a caller outside the fence', () => {
-      expect(controller.methods({ ip: '203.0.113.5' } as any)).toEqual({ nativePasswordLogin: false, siteName: 'Tegata' })
+      expect(controller.methods({ ip: '203.0.113.5' } as any)).toEqual({ nativePasswordLogin: false, usernamePattern: '^[a-z0-9][a-z0-9._-]{0,63}$', siteName: 'Tegata' })
     })
   })
 

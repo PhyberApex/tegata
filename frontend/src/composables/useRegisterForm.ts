@@ -1,3 +1,24 @@
+import { DEFAULT_USERNAME_PATTERN, isValidUsername, usernameRuleMessage } from '@tegata/shared'
+import { ref } from 'vue'
+
+// The backend's effective USERNAME_PATTERN, shared by the register page and the
+// create-user modal; the default until (or unless) /api/auth/methods answers.
+export const usernamePattern = ref(DEFAULT_USERNAME_PATTERN)
+
+/** Describes the username rule in words — shown as the field hint. */
+export function usernameRule(pattern: string = usernamePattern.value): string {
+  return usernameRuleMessage(pattern)
+}
+
+/** An error naming the rule when the username breaks it; empty when it is fine (or still empty). */
+export function usernameError(username: string, pattern: string = usernamePattern.value): string {
+  if (!username)
+    return ''
+  return isValidUsername(username, pattern)
+    ? ''
+    : usernameRuleMessage(pattern)
+}
+
 export interface InviteValidation {
   valid: boolean
   groups?: string[]

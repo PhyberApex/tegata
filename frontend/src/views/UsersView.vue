@@ -13,6 +13,7 @@ import { confirmAccessDiffWithGuardFallback, useAccessDiffConfirm } from '../com
 import { isEnabledCountGuardError, useApi } from '../composables/useApi'
 import { useEnabledCountConfirm } from '../composables/useEnabledCountConfirm'
 import { useModalAction } from '../composables/useModalAction'
+import { usernameError } from '../composables/useRegisterForm'
 import { outstandingResetTokenFor, resetLinkUrl } from '../utils/resetTokens'
 
 const api = useApi()
@@ -131,6 +132,9 @@ function openDelete(username: string) {
 
 async function handleCreate() {
   await modalAction.run(async () => {
+    const invalid = usernameError(createForm.value.username)
+    if (invalid)
+      throw new Error(invalid)
     await api.post('/api/users', createForm.value)
     showCreateModal.value = false
     await loadData()

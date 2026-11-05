@@ -166,6 +166,7 @@ open — it is open on purpose.
 | `SMTP_SENDER` | no | `Tegata <noreply@example.com>` | the From header |
 | `SITE_NAME` | no | `Tegata` | the name shown in invite and reset emails, the login, register and reset pages, and the browser tab |
 | `TRUST_PROXY` | no | `1` | the hops between the client and Tegata: a count (`2`), IPs/CIDRs (`10.0.0.0/8,172.16.0.0/12`) or `loopback`/`linklocal`/`uniquelocal`; an empty or unparseable value refuses to boot |
+| `USERNAME_PATTERN` | no | `^[a-z0-9][a-z0-9._-]{0,63}$` | the regular expression new usernames (created by an admin or chosen on invite redemption) must match; existing users are never re-checked; a pattern that does not compile refuses to boot |
 | `STATUS_ENDPOINT_TOKEN` | no | — | enables `GET /api/status` and is the token it requires (`Authorization: Bearer <token>`, or `?token=`); unset, the endpoint is a 404 |
 | `NODE_ENV` | no | — | `production` sets the `Secure` flag on cookies; set it |
 

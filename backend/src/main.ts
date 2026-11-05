@@ -7,9 +7,11 @@ import helmet from 'helmet'
 import { AppModule } from './app.module'
 import { DynamicLogger, installFetchLogger, setDynamicLoggerInstance } from './common'
 import { parseTrustProxy } from './config/parse-trust-proxy'
+import { assertUsernamePattern } from './config/username-pattern'
 import { parseListenPort } from './listen-port'
 
 async function bootstrap() {
+  assertUsernamePattern()
   const port = parseListenPort(process.env.PORT)
   const host = process.env.HOST?.trim() || '0.0.0.0'
 

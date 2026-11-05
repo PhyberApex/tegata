@@ -4,6 +4,7 @@ import { Body, Controller, Get, Logger, Post, Req, Res, UnauthorizedException } 
 import { ConfigService } from '@nestjs/config'
 import { Throttle } from '@nestjs/throttler'
 import { IsString } from 'class-validator'
+import { usernamePatternSource } from '../config/username-pattern'
 import { AuthService } from './auth.service'
 import { NativeLoginFence } from './native-login-fence'
 import { OidcService } from './oidc.service'
@@ -39,6 +40,7 @@ export class AuthController {
   methods(@Req() req: Request) {
     return {
       nativePasswordLogin: this.fence.admits(req.ip),
+      usernamePattern: usernamePatternSource(),
       siteName: this.config.get<string>('SITE_NAME', 'Tegata') || 'Tegata',
     }
   }

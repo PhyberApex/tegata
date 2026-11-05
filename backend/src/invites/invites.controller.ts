@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common'
 import { IsArray, IsBoolean, IsEmail, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator'
 import { AuthGuard } from '../auth/auth.guard'
+import { IsUsername } from '../config/username-pattern'
 import { InvitesService, isPendingInvite } from './invites.service'
 
 class CreateInviteDto {
@@ -32,9 +33,9 @@ class CreateInviteDto {
   sendEmail?: boolean
 }
 
-class RedeemInviteDto {
+export class RedeemInviteDto {
   @IsString()
-  @MinLength(1)
+  @IsUsername()
   username!: string
 
   @IsString()
