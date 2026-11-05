@@ -30,7 +30,9 @@ services:
     # Tegata shares Authelia's root-owned 0600 users_database.yml, so it runs
     # as uid 0 like Authelia does; what root can do is cut down instead: no
     # capabilities, no privilege escalation, and nothing writable outside the
-    # two mounts and /tmp.
+    # two mounts and /tmp. If Authelia runs as another uid (PUID/PGID), run
+    # Tegata as that uid and make the users file and /data writable by it:
+    # user: "1000:1000"
     read_only: true
     tmpfs:
       - /tmp
