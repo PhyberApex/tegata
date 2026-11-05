@@ -99,7 +99,11 @@ describe('metricsMiddleware', () => {
 
   describe('request tracking', () => {
     it('should record request metrics on response finish', async () => {
-      const req = createMockRequest({ method: 'GET', path: '/api/health' })
+      const req = createMockRequest({
+        method: 'GET',
+        path: '/api/health',
+        route: { path: '/api/health' },
+      })
       const res = createMockResponse({ statusCode: 200 })
       const next = vi.fn()
 
@@ -122,6 +126,7 @@ describe('metricsMiddleware', () => {
       const req = createMockRequest({
         method: 'POST',
         path: '/api/chat',
+        route: { path: '/api/chat' },
         contentLength: '1024',
       })
       const res = createMockResponse({ statusCode: 201 })
@@ -139,7 +144,11 @@ describe('metricsMiddleware', () => {
     })
 
     it('should record response size when content-length header present', async () => {
-      const req = createMockRequest({ method: 'GET', path: '/api/status' })
+      const req = createMockRequest({
+        method: 'GET',
+        path: '/api/status',
+        route: { path: '/api/status' },
+      })
       const res = createMockResponse({ statusCode: 200, contentLength: '2048' })
       const next = vi.fn()
 
@@ -224,94 +233,40 @@ describe('metricsMiddleware', () => {
       )
     })
 
-    it('should replace numeric IDs with :id', async () => {
-      const req = createMockRequest({
-        method: 'GET',
-        path: '/api/scheduler/tasks/12345',
-      })
+    it('should record the templated route when req.route is set only after next()', async () => {
+      const req = createMockRequest({ method: 'PATCH', path: '/api/users/alice' })
       const res = createMockResponse({ statusCode: 200 })
-      const next = vi.fn()
-
-      middleware.use(req, res, next)
-      res.emit('finish')
-
-      await flushImmediate()
-
-      expect(mockMetricsService.httpRequestsTotal.inc).toHaveBeenCalledWith(
-        expect.objectContaining({ route: '/api/scheduler/tasks/:id' }),
-      )
-    })
-
-    it('should replace UUIDs with :uuid', async () => {
-      const req = createMockRequest({
-        method: 'DELETE',
-        path: '/api/resources/550e8400-e29b-41d4-a716-446655440000',
+      const next = vi.fn(() => {
+        req.route = { path: '/:username' }
+        req.baseUrl = '/api/users'
       })
-      const res = createMockResponse({ statusCode: 204 })
-      const next = vi.fn()
 
       middleware.use(req, res, next)
       res.emit('finish')
 
       await flushImmediate()
 
-      expect(mockMetricsService.httpRequestsTotal.inc).toHaveBeenCalledWith(
-        expect.objectContaining({ route: '/api/resources/:uuid' }),
-      )
-    })
-
-    it('should replace MongoDB ObjectIDs with :objectid', async () => {
-      const req = createMockRequest({
-        method: 'GET',
-        path: '/api/items/507f1f77bcf86cd799439011',
-      })
-      const res = createMockResponse({ statusCode: 200 })
-      const next = vi.fn()
-
-      middleware.use(req, res, next)
-      res.emit('finish')
-
-      await flushImmediate()
-
-      expect(mockMetricsService.httpRequestsTotal.inc).toHaveBeenCalledWith(
-        expect.objectContaining({ route: '/api/items/:objectid' }),
-      )
-    })
-
-    it('should handle multiple ID replacements', async () => {
-      const req = createMockRequest({
+      expect(mockMetricsService.httpRequestsTotal.inc).toHaveBeenCalledWith({
         method: 'PATCH',
-        path: '/api/users/123/posts/456/comments/789',
+        route: '/api/users/:username',
+        status_code: '200',
       })
-      const res = createMockResponse({ statusCode: 200 })
-      const next = vi.fn()
-
-      middleware.use(req, res, next)
-      res.emit('finish')
-
-      await flushImmediate()
-
-      expect(mockMetricsService.httpRequestsTotal.inc).toHaveBeenCalledWith(
-        expect.objectContaining({ route: '/api/users/:id/posts/:id/comments/:id' }),
-      )
     })
 
-    it('should preserve non-ID path segments', async () => {
-      const req = createMockRequest({
-        method: 'GET',
-        path: '/api/hf-models/local',
-      })
-      const res = createMockResponse({ statusCode: 200 })
-      const next = vi.fn()
-
-      middleware.use(req, res, next)
-      res.emit('finish')
+    it('should record unmatched requests under a single constant label', async () => {
+      for (const path of ['/api/foo', '/wp-login.php']) {
+        const req = createMockRequest({ method: 'GET', path, contentLength: '10' })
+        const res = createMockResponse({ statusCode: 404, contentLength: '20' })
+        middleware.use(req, res, vi.fn())
+        res.emit('finish')
+      }
 
       await flushImmediate()
 
-      expect(mockMetricsService.httpRequestsTotal.inc).toHaveBeenCalledWith(
-        expect.objectContaining({ route: '/api/hf-models/local' }),
-      )
+      const routes = mockMetricsService.httpRequestsTotal.inc.mock.calls.map((c: any[]) => c[0].route)
+      expect(routes).toEqual(['unmatched', 'unmatched'])
+      expect(mockMetricsService.httpRequestSize.observe).toHaveBeenCalledWith({ method: 'GET', route: 'unmatched' }, 10)
+      expect(mockMetricsService.httpResponseSize.observe).toHaveBeenCalledWith({ method: 'GET', route: 'unmatched' }, 20)
     })
   })
 
