@@ -164,6 +164,7 @@ open — it is open on purpose.
 | `SMTP_PORT` | no | `587` | |
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | no | — | both or neither |
 | `SMTP_SENDER` | no | `Tegata <noreply@example.com>` | the From header |
+| `SITE_NAME` | no | `Tegata` | the name shown in invite and reset emails, the login, register and reset pages, and the browser tab |
 | `NODE_ENV` | no | — | `production` sets the `Secure` flag on cookies; set it |
 
 Tegata trusts exactly one proxy hop for `X-Forwarded-For`, so `req.ip` under your reverse

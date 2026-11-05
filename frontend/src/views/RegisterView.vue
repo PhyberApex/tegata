@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router'
 import RegisterField from '../components/RegisterField.vue'
 import { useApi } from '../composables/useApi'
 import { inviteFieldsPatch, passwordMatchError } from '../composables/useRegisterForm'
+import { siteName } from '../composables/useSiteName'
 
 const route = useRoute()
 const api = useApi()
@@ -171,7 +172,7 @@ async function handleRegister() {
       <div class="register-brand">
         <span class="register-logo">&#x624B;&#x5F62;</span>
         <h1 class="register-title">
-          Tegata
+          {{ siteName }}
         </h1>
         <p class="register-subtitle">
           You've been invited to register

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import process from 'node:process'
 import { Body, Controller, Get, Logger, Post, Req, Res, UnauthorizedException } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { Throttle } from '@nestjs/throttler'
 import { IsString } from 'class-validator'
 import { AuthService } from './auth.service'
@@ -25,17 +26,20 @@ export class AuthController {
     private authService: AuthService,
     private oidcService: OidcService,
     private fence: NativeLoginFence,
+    private config: ConfigService,
   ) {}
 
   /**
    * Which login doors this caller is offered. SSO is always one; native
    * password login is only offered inside the Break-Glass Fence, so the login
-   * card never has to guess at its own address (ADR-0004).
+   * card never has to guess at its own address (ADR-0004). Also carries the
+   * configured SITE_NAME, the one unauthenticated call the SPA makes pre-login.
    */
   @Get('methods')
   methods(@Req() req: Request) {
     return {
       nativePasswordLogin: this.fence.admits(req.ip),
+      siteName: this.config.get<string>('SITE_NAME', 'Tegata'),
     }
   }
 

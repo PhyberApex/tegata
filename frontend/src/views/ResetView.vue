@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '../composables/useApi'
 import { passwordMatchError } from '../composables/useRegisterForm'
+import { siteName } from '../composables/useSiteName'
 
 const route = useRoute()
 const api = useApi()
@@ -94,7 +95,7 @@ async function handleReset() {
       <div class="reset-brand">
         <span class="reset-logo">&#x624B;&#x5F62;</span>
         <h1 class="reset-title">
-          Tegata
+          {{ siteName }}
         </h1>
         <p class="reset-subtitle">
           Set a new password for <strong>{{ username }}</strong>
