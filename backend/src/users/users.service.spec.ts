@@ -313,7 +313,7 @@ describe('usersService', () => {
       expect(writeFileSyncMock).toHaveBeenCalledWith(
         '/tmp/users.yml.tmp',
         expect.stringContaining('charlie'),
-        'utf-8',
+        { encoding: 'utf-8', mode: 0o600 },
       )
       expect(renameSyncMock).toHaveBeenCalledWith('/tmp/users.yml.tmp', '/tmp/users.yml')
     })
@@ -470,7 +470,7 @@ describe('usersService', () => {
       expect(writeFileSyncMock).toHaveBeenCalledWith(
         '/tmp/users.yml.tmp',
         expect.stringContaining('disabled: true'),
-        'utf-8',
+        { encoding: 'utf-8', mode: 0o600 },
       )
     })
 
@@ -489,7 +489,7 @@ describe('usersService', () => {
       expect(writeFileSyncMock).toHaveBeenCalledWith(
         '/tmp/users.yml.tmp',
         expect.not.stringContaining('disabled'),
-        'utf-8',
+        { encoding: 'utf-8', mode: 0o600 },
       )
     })
 
@@ -987,7 +987,7 @@ describe('usersService', () => {
       expect(writeFileSyncMock).toHaveBeenCalledWith(
         '/tmp/users.yml.tmp',
         expect.not.stringContaining('bob'),
-        'utf-8',
+        { encoding: 'utf-8', mode: 0o600 },
       )
       expect(renameSyncMock).toHaveBeenCalledWith('/tmp/users.yml.tmp', '/tmp/users.yml')
     })
@@ -1031,7 +1031,7 @@ describe('usersService', () => {
       expect(writeFileSyncMock).toHaveBeenCalledWith(
         '/tmp/users.yml.tmp',
         expect.not.stringContaining('bob'),
-        'utf-8',
+        { encoding: 'utf-8', mode: 0o600 },
       )
     })
 
@@ -1062,7 +1062,7 @@ describe('usersService', () => {
       expect(writeFileSyncMock).toHaveBeenCalledWith(
         '/tmp/users.yml.tmp',
         expect.stringContaining('disabled: true'),
-        'utf-8',
+        { encoding: 'utf-8', mode: 0o600 },
       )
     })
 
