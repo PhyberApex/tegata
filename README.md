@@ -11,6 +11,8 @@ the users file to notice edits made behind its back, parses Authelia's main conf
 preview what each group is actually granted, and refuses the one write that would lock every
 admin out of SSO.
 
+![Users list with per-user groups, reset links and enable/disable actions](docs/screenshots/users.png)
+
 ## Trust model — read this first
 
 - **Tegata does its own authentication.** Do not put it behind Authelia's forward-auth: it has
@@ -33,6 +35,8 @@ admin out of SSO.
 - **Tegata never writes Authelia's main configuration.** It reads `configuration.yml` for
   the Access Preview and nothing else.
 
+![Login page: the Authelia door on top, the break-glass admin password below it](docs/screenshots/login.png)
+
 ## 🤖 AI Disclaimer
 
 > **Heads up!** Tegata is developed with heavy use of AI coding tools. Issues and pull
@@ -52,15 +56,24 @@ admin out of SSO.
   list when you create an invite or a user. No live link afterwards.
 - **Invites** — expiring, single-use self-registration links (7 days by default), optionally
   pre-filled and optionally emailed. The recipient picks their own username and password.
+
+  ![Create Invite modal with groups, expiry and optional pre-filled details](docs/screenshots/create-invite.png)
+
 - **Reset tokens** — a 1-day link that lets one existing user set a new password, for when
   they have forgotten it. One outstanding token per user.
 - **Email delivery** — invite and reset links go out over SMTP when configured, best-effort
   and never blocking the create; the copy-link and QR-code paths are always there.
 - **Out-of-band edit detection** — the users file is hashed after every write; an edit by
   anything else shows a banner until an admin accepts the new baseline. It never blocks.
+
+  ![Banner: the users database was modified outside Tegata, with an Accept current state button](docs/screenshots/integrity-banner.png)
+
 - **Access Preview** — a read-only, per-group summary of what Authelia's `configuration.yml`
   grants (the `{group}` domain placeholder, `group:` subject rules, OIDC authorization
   policies), plus config-level notes such as an authorization policy no client references.
+
+  ![Access preview for one group: the domains and OIDC apps Authelia grants it](docs/screenshots/access-preview.png)
+
 - **Enabled-Count Guard** — a delete, disable or group change that would leave fewer than two
   enabled users, or empty a guarded group of its last enabled member, is refused until
   confirmed.
