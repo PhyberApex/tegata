@@ -168,7 +168,7 @@ export class UsersService implements OnModuleInit {
       '---',
     ].join('\n')
 
-    const content = `${header}\n${yaml.dump(db, { lineWidth: -1, quotingType: '"' })}`
+    const content = `${header}\n${yaml.dump(db, { lineWidth: -1, quoteStyle: 'double' })}`
 
     // Write-then-rename keeps the swap atomic so Authelia's file watcher never reloads a partial file
     const tmpPath = `${this.filePath}.tmp`

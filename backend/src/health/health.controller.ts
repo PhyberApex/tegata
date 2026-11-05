@@ -69,7 +69,7 @@ export class HealthController {
     }
 
     try {
-      yaml.load(content)
+      yaml.loadAll(content)
       return { healthy: true }
     }
     catch (err) {
