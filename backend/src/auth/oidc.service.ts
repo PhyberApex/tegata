@@ -15,7 +15,12 @@ export class OidcService {
       const clientId = this.config.getOrThrow<string>('OIDC_CLIENT_ID')
       const clientSecret = this.config.getOrThrow<string>('OIDC_CLIENT_SECRET')
 
+      // Never cache a failure: the provider may be down now and healthy on the next attempt.
       this.configPromise = oidc.discovery(new URL(issuer), clientId, clientSecret, oidc.ClientSecretPost(clientSecret))
+        .catch((err) => {
+          this.configPromise = null
+          throw err
+        })
     }
     return this.configPromise
   }
