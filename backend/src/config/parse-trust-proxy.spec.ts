@@ -59,6 +59,14 @@ describe('parseTrustProxy', () => {
       expect(await clientIp(parseTrustProxy('2'), chain)).toBe('203.0.113.9')
     })
 
+    it('a 10.0.0.0/8 entry trusts a proxy in that range', async () => {
+      expect(await clientIp(parseTrustProxy('127.0.0.0/8,10.0.0.0/8'), '203.0.113.9, 10.1.2.3')).toBe('203.0.113.9')
+    })
+
+    it('rejects a value that is not an address at boot', () => {
+      expect(() => new ExpressAdapter().getInstance().set('trust proxy', parseTrustProxy('banana'))).toThrow()
+    })
+
     it('a CIDR list trusts the proxies inside it', async () => {
       expect(await clientIp(parseTrustProxy('127.0.0.0/8,198.51.100.0/24'), chain)).toBe('203.0.113.9')
     })
