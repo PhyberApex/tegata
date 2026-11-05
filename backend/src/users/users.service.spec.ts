@@ -724,7 +724,7 @@ describe('usersService', () => {
       })
       readFileSyncMock.mockImplementation(() => { throw enoentError() })
 
-      expect(service.getDatabaseIntegrityStatus()).toEqual({ matches: false, unreadable: false, unreadableReason: null })
+      expect(service.getDatabaseIntegrityStatus()).toEqual({ matches: true, unreadable: false, unreadableReason: null })
     })
   })
 
@@ -926,9 +926,21 @@ describe('usersService', () => {
     })
 
     it('should throw NotFoundException when the file cannot be read', () => {
-      readFileSyncMock.mockImplementation(() => { throw new Error('ENOENT') })
+      readFileSyncMock.mockImplementation(() => { throw new Error('EACCES') })
 
       expect(() => service.acceptDatabaseBaseline()).toThrow(NotFoundException)
+    })
+
+    it('should be a no-op on a fresh install: missing file and no baseline row', () => {
+      mockPrepare.mockReturnValue({
+        run: mockRun,
+        get: vi.fn(() => undefined),
+        all: vi.fn(),
+      })
+      readFileSyncMock.mockImplementation(() => { throw enoentError() })
+
+      expect(() => service.acceptDatabaseBaseline()).not.toThrow()
+      expect(mockRun).not.toHaveBeenCalled()
     })
   })
 
