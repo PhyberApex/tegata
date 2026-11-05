@@ -128,6 +128,24 @@ afterEach(() => {
 })
 
 describe('oidcService.exchangeCode', () => {
+  // README tells Authelia operators to configure token_endpoint_auth_method: client_secret_post.
+  it('authenticates at the token endpoint with client_secret_post', async () => {
+    respondAs({
+      token: tokenResponse({
+        id_token: idToken({ sub: 'user-sub' }),
+      }),
+      userinfo: () => jsonResponse({ sub: 'user-sub' }),
+    })
+
+    await exchange(createService())
+
+    const [, init] = fetchMock.mock.calls.find(([input]) => urlOf(input) === `${ISSUER}/api/oidc/token`)!
+    expect(new Headers(init.headers).get('Authorization')).toBeNull()
+    const body = new URLSearchParams(init.body)
+    expect(body.get('client_id')).toBe(CLIENT_ID)
+    expect(body.get('client_secret')).toBe('client-secret')
+  })
+
   it('returns the userinfo groups and preferred username', async () => {
     respondAs({
       token: tokenResponse({

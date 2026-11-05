@@ -15,7 +15,7 @@ export class OidcService {
       const clientId = this.config.getOrThrow<string>('OIDC_CLIENT_ID')
       const clientSecret = this.config.getOrThrow<string>('OIDC_CLIENT_SECRET')
 
-      this.configPromise = oidc.discovery(new URL(issuer), clientId, clientSecret, oidc.ClientSecretBasic(clientSecret))
+      this.configPromise = oidc.discovery(new URL(issuer), clientId, clientSecret, oidc.ClientSecretPost(clientSecret))
     }
     return this.configPromise
   }
