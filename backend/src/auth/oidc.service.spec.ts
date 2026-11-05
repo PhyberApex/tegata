@@ -239,7 +239,9 @@ describe('oidcService.buildAuthorizationUrl', () => {
     fetchMock.mockImplementationOnce(() => Promise.reject(new Error('connect ECONNREFUSED')))
     const service = createService()
 
-    await expect(service.buildAuthorizationUrl()).rejects.toThrow(/ECONNREFUSED/)
+    await expect(service.buildAuthorizationUrl()).rejects.toMatchObject({
+      cause: { message: 'connect ECONNREFUSED' },
+    })
     const { url: authUrl } = await service.buildAuthorizationUrl()
 
     expect(authUrl).toContain(`${ISSUER}/api/oidc/authorization`)
