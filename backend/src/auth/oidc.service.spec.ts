@@ -236,15 +236,13 @@ describe('oidcService.buildAuthorizationUrl', () => {
       token: tokenResponse(),
       userinfo: () => jsonResponse({ sub: 'user-sub' }),
     })
-    const healthy = fetchMock.getMockImplementation()!
     fetchMock.mockImplementationOnce(() => Promise.reject(new Error('connect ECONNREFUSED')))
-    fetchMock.mockImplementation(healthy)
     const service = createService()
 
-    await expect(service.buildAuthorizationUrl()).rejects.toThrow()
-    const { url } = await service.buildAuthorizationUrl()
+    await expect(service.buildAuthorizationUrl()).rejects.toThrow(/ECONNREFUSED/)
+    const { url: authUrl } = await service.buildAuthorizationUrl()
 
-    expect(url).toContain(`${ISSUER}/api/oidc/authorization`)
-    expect(calledUrls().filter(u => u.endsWith('/.well-known/openid-configuration'))).toHaveLength(2)
+    expect(authUrl).toContain(`${ISSUER}/api/oidc/authorization`)
+    expect(calledUrls().filter(url => url.endsWith('/.well-known/openid-configuration'))).toHaveLength(2)
   })
 })
