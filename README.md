@@ -166,6 +166,7 @@ open — it is open on purpose.
 | `SMTP_SENDER` | no | `Tegata <noreply@example.com>` | the From header |
 | `SITE_NAME` | no | `Tegata` | the name shown in invite and reset emails, the login, register and reset pages, and the browser tab |
 | `TRUST_PROXY` | no | `1` | the hops between the client and Tegata: a count (`2`), IPs/CIDRs (`10.0.0.0/8,172.16.0.0/12`) or `loopback`/`linklocal`/`uniquelocal`; an empty or unparseable value refuses to boot |
+| `STATUS_ENDPOINT_TOKEN` | no | — | enables `GET /api/status` and is the token it requires (`Authorization: Bearer <token>`, or `?token=`); unset, the endpoint is a 404 |
 | `NODE_ENV` | no | — | `production` sets the `Secure` flag on cookies; set it |
 
 By default Tegata trusts exactly one proxy hop for `X-Forwarded-For`, so `req.ip` under your
@@ -175,6 +176,28 @@ Tailscale), set `TRUST_PROXY` to the hop count or to the addresses of your proxi
 changes who the fence admits: too low and `req.ip` is an inner proxy, which may sit on a private
 address and let everyone in; too high lets a caller spoof their address with their own
 `X-Forwarded-For`. With no proxy in front, set `TRUST_PROXY=0`.
+
+### Dashboard widget
+
+`GET /api/status` exists for the [gethomepage](https://gethomepage.dev) `customapi` widget. It is
+off (404) until you set `STATUS_ENDPOINT_TOKEN`; then every request needs that token, otherwise it
+is a 401. The response is `{ totalUsers, pendingInvites, authelia: { ageHours, ok } }`. The
+`customapi` widget can send headers, so prefer the bearer header over `?token=` (query strings end
+up in proxy logs):
+
+```yaml
+- Tegata:
+    widget:
+      type: customapi
+      url: https://tegata.example.com/api/status
+      headers:
+        Authorization: Bearer {{HOMEPAGE_VAR_TEGATA_STATUS_TOKEN}}
+      mappings:
+        - field: totalUsers
+          label: Users
+        - field: pendingInvites
+          label: Pending invites
+```
 
 ## Development
 
@@ -231,7 +254,7 @@ either role.
 | Reset tokens | `GET/POST /api/reset-tokens`, `DELETE /api/reset-tokens/:id`, `POST /api/reset-tokens/:id/send`, public validate and redeem under `/api/reset-tokens/:token` |
 | Self-service | `GET/PATCH /api/profile`, `POST /api/profile/password` |
 | Integrity | `GET /api/users/database-integrity`, `POST /api/users/database-integrity/accept-baseline` |
-| Infra | `GET /api/health`, `GET /api/status` (an unauthenticated summary for a dashboard widget), `GET /metrics`, `GET/POST /api/control/log-level` |
+| Infra | `GET /api/health`, `GET /api/status` (a user/invite summary for a dashboard widget; 404 unless `STATUS_ENDPOINT_TOKEN` is set), `GET /metrics`, `GET/POST /api/control/log-level` |
 
 ## License
 
