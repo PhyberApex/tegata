@@ -206,7 +206,7 @@ open — it is open on purpose.
 | `OIDC_ISSUER` | for SSO | — | Authelia's URL, e.g. `https://auth.example.com` |
 | `OIDC_CLIENT_ID` | for SSO | — | the client id from Authelia's config |
 | `OIDC_CLIENT_SECRET` | for SSO | — | the client secret's plaintext |
-| `OIDC_REDIRECT_URI` | for SSO | — | `https://<tegata host>/api/auth/oidc/callback` |
+| `OIDC_REDIRECT_URI` | for SSO | — | `https://<tegata host>/api/auth/oidc/callback`; also what the callback validates against and sends as `redirect_uri` in the token exchange, so it must match Authelia's registered redirect URI exactly (the request's `Host` is not used) |
 | `OIDC_REQUIRED_GROUP` | no | `tegata` | the Authelia group that gets an admin session; always a guarded group. **Create it in Authelia and add yourself, or every OIDC login lands on the self-service page** |
 | `AUTHELIA_USERS_FILE` | no | `/authelia-config/users_database.yml` | the file Tegata writes |
 | `AUTHELIA_CONFIG_FILE` | no | `/authelia-config/configuration.yml` | the file the Access Preview reads |

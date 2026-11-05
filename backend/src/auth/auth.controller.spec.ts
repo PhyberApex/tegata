@@ -48,6 +48,9 @@ describe('authController', () => {
           provide: ConfigService,
           useValue: {
             get: (_key: string, fallback: string) => fallback,
+            getOrThrow: (key: string) => key === 'OIDC_REDIRECT_URI'
+              ? 'https://tegata.example.com/api/auth/oidc/callback'
+              : undefined,
           },
         },
         NativeLoginFence,
@@ -195,8 +198,8 @@ describe('authController', () => {
           oidc_state: JSON.stringify({ state: 'abc', codeVerifier: 'ver' }),
         },
         originalUrl: '/api/auth/oidc/callback?code=xyz&state=abc',
-        protocol: 'https',
-        get: vi.fn().mockReturnValue('tegata.example.com'),
+        protocol: 'http',
+        get: vi.fn().mockReturnValue('tegata:3000'),
       } as any
       const mockRes = {
         clearCookie: vi.fn(),
@@ -206,6 +209,11 @@ describe('authController', () => {
 
       await controller.oidcCallback(mockReq, mockRes)
 
+      expect(mockOidcService.exchangeCode).toHaveBeenCalledTimes(1)
+      const [url] = mockOidcService.exchangeCode.mock.calls[0]
+      expect(url.origin + url.pathname).toBe('https://tegata.example.com/api/auth/oidc/callback')
+      expect(url.searchParams.get('code')).toBe('xyz')
+      expect(url.searchParams.get('state')).toBe('abc')
       expect(mockAuthService.loginWithOidc).toHaveBeenCalledWith('alice', true)
       expect(mockRes.cookie).toHaveBeenCalledWith('tegata_token', 'jwt-oidc-token', expect.objectContaining({
         httpOnly: true,
