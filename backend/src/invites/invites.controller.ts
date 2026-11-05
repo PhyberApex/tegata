@@ -1,12 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common'
-import { IsArray, IsBoolean, IsEmail, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator'
+import { IsBoolean, IsEmail, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator'
 import { AuthGuard } from '../auth/auth.guard'
+import { IsGroupList, IsTrimmedNonEmpty } from '../common/name-validation'
 import { IsUsername } from '../config/username-pattern'
 import { InvitesService, isPendingInvite } from './invites.service'
 
-class CreateInviteDto {
-  @IsArray()
-  @IsString({ each: true })
+export class CreateInviteDto {
+  @IsGroupList()
   groups!: string[]
 
   @IsOptional()
@@ -20,8 +20,7 @@ class CreateInviteDto {
   email?: string
 
   @IsOptional()
-  @IsString()
-  @MinLength(1)
+  @IsTrimmedNonEmpty()
   displayname?: string
 
   @IsOptional()
@@ -38,7 +37,7 @@ export class RedeemInviteDto {
   @IsUsername()
   username!: string
 
-  @IsString()
+  @IsTrimmedNonEmpty()
   displayname!: string
 
   @IsEmail()
