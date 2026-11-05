@@ -13,6 +13,45 @@ admin out of SSO.
 
 ![Users list with per-user groups, reset links and enable/disable actions](docs/screenshots/users.png)
 
+## Quickstart
+
+From zero to an admin login, assuming Authelia is already running with the file user backend:
+
+1. **Create the `tegata` group in Authelia and add your own user to it.** In
+   `users_database.yml`, add `tegata` to your user's `groups:`. Members of this group
+   (`OIDC_REQUIRED_GROUP`) get the admin UI; everyone else who logs in with Authelia gets the
+   self-service profile page. Skip this step and every OIDC login lands on the profile page
+   with no explanation.
+2. **Add the OIDC client to Authelia.** Copy the client block from
+   [Authelia configuration](#authelia-configuration) into your `configuration.yml`, and make
+   sure `authentication_backend.file.watch: true` is set so Tegata's writes take effect
+   without a restart.
+3. **Generate the admin password hash and the JWT secret** with the commands in
+   [Running it](#running-it): the `authelia crypto hash generate argon2` command for
+   `TEGATA_ADMIN_PASSWORD_HASH`, and `openssl rand -hex 32` for `TEGATA_JWT_SECRET`.
+4. **Copy [`.env.example`](.env.example) to `.env`** and fill in the required variables
+   (`TEGATA_ADMIN_PASSWORD_HASH`, `TEGATA_JWT_SECRET`) and the `for SSO` ones (`OIDC_ISSUER`,
+   `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`). Everything else is optional;
+   see [Environment variables](#environment-variables) for `PORT`, `TRUST_PROXY`, `SITE_NAME`,
+   `NATIVE_LOGIN_CIDRS` and the rest.
+5. **Add the compose service** from [Running it](#running-it) (or start from
+   [`docker-compose.yml`](docker-compose.yml)), start it, open your Tegata URL and click
+   **Login with Authelia**.
+
+**Something went wrong?**
+
+- *No password form on the login page* — that is the [break-glass fence](#trust-model--read-this-first)
+  at work: your source address is outside `NATIVE_LOGIN_CIDRS`. Behind a reverse proxy, check
+  that `TRUST_PROXY` matches the number of hops, so Tegata sees the client's address and not
+  a proxy's.
+- *Logged in, but landed on the profile page instead of the admin UI* — your user is not in
+  the `tegata` group (or whatever `OIDC_REQUIRED_GROUP` names). Add it (step 1) and log in
+  again.
+- *`invalid_client` from Authelia* — the client's `token_endpoint_auth_method` does not match
+  what Tegata sends; use `client_secret_post` as in the
+  [client block](#authelia-configuration), and put the secret's hash in Authelia and its
+  plaintext in `OIDC_CLIENT_SECRET`.
+
 ## Trust model — read this first
 
 - **Tegata does its own authentication.** Do not put it behind Authelia's forward-auth: it has
@@ -163,7 +202,7 @@ open — it is open on purpose.
 | `OIDC_CLIENT_ID` | for SSO | — | the client id from Authelia's config |
 | `OIDC_CLIENT_SECRET` | for SSO | — | the client secret's plaintext |
 | `OIDC_REDIRECT_URI` | for SSO | — | `https://<tegata host>/api/auth/oidc/callback` |
-| `OIDC_REQUIRED_GROUP` | no | `tegata` | the Authelia group that gets an admin session; always a guarded group |
+| `OIDC_REQUIRED_GROUP` | no | `tegata` | the Authelia group that gets an admin session; always a guarded group. **Create it in Authelia and add yourself, or every OIDC login lands on the self-service page** |
 | `AUTHELIA_USERS_FILE` | no | `/authelia-config/users_database.yml` | the file Tegata writes |
 | `AUTHELIA_CONFIG_FILE` | no | `/authelia-config/configuration.yml` | the file the Access Preview reads |
 | `TEGATA_DB_PATH` | no | `/data/tegata.db` | SQLite file for groups, invites, tokens, bundles, the baseline hash |
