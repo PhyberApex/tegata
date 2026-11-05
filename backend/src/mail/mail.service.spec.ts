@@ -61,7 +61,7 @@ describe('mailService', () => {
 
   describe('when SMTP_USERNAME is set without SMTP_PASSWORD', () => {
     it('should disable delivery instead of attempting auth with a missing password', async () => {
-      const service = await buildService({ SMTP_HOST: 'smtp.example.com', SMTP_USERNAME: 'user' })
+      const service = await buildService({ SMTP_HOST: 'smtp.example.com', SMTP_USERNAME: 'user', PUBLIC_URL: 'https://tegata.example.com' })
 
       const result = await service.sendInviteEmail({
         to: 'a@test.com',
@@ -90,7 +90,7 @@ describe('mailService', () => {
 
     it('should name the site in the invite subject and body', async () => {
       nodemailerMock.sendMail.mockResolvedValue(undefined)
-      const service = await buildService({ SMTP_HOST: 'smtp.example.com', SITE_NAME: 'Example Family SSO' })
+      const service = await buildService({ SMTP_HOST: 'smtp.example.com', SITE_NAME: 'Example Family SSO', PUBLIC_URL: 'https://tegata.example.com' })
 
       await service.sendInviteEmail(invite)
 
@@ -102,7 +102,7 @@ describe('mailService', () => {
 
     it('should name the site in the reset subject and body', async () => {
       nodemailerMock.sendMail.mockResolvedValue(undefined)
-      const service = await buildService({ SMTP_HOST: 'smtp.example.com', SITE_NAME: 'Example Family SSO' })
+      const service = await buildService({ SMTP_HOST: 'smtp.example.com', SITE_NAME: 'Example Family SSO', PUBLIC_URL: 'https://tegata.example.com' })
 
       await service.sendResetEmail({ to: 'b@test.com', displayname: 'Bob', token: 'tok-2' })
 
@@ -114,13 +114,53 @@ describe('mailService', () => {
 
     it('should default to Tegata when unset', async () => {
       nodemailerMock.sendMail.mockResolvedValue(undefined)
-      const service = await buildService({ SMTP_HOST: 'smtp.example.com' })
+      const service = await buildService({ SMTP_HOST: 'smtp.example.com', PUBLIC_URL: 'https://tegata.example.com' })
 
       await service.sendInviteEmail(invite)
 
       expect(nodemailerMock.sendMail).toHaveBeenCalledWith(expect.objectContaining({
         subject: 'You\'ve been invited to join Tegata',
       }))
+    })
+  })
+
+  describe('pUBLIC_URL resolution', () => {
+    const smtp = { SMTP_HOST: 'smtp.example.com' }
+    const reset = { to: 'b@test.com', displayname: null, token: 'tok-2' }
+
+    it('should refuse to boot when SMTP_HOST is set without PUBLIC_URL or OIDC_REDIRECT_URI', async () => {
+      await expect(buildService(smtp)).rejects.toThrow(/PUBLIC_URL.*OIDC_REDIRECT_URI/)
+    })
+
+    it('should derive the origin from OIDC_REDIRECT_URI when PUBLIC_URL is unset', async () => {
+      nodemailerMock.sendMail.mockResolvedValue(undefined)
+      const service = await buildService({ ...smtp, OIDC_REDIRECT_URI: 'https://tegata.example.com/api/auth/oidc/callback' })
+
+      await service.sendResetEmail(reset)
+
+      expect(nodemailerMock.sendMail).toHaveBeenCalledWith(expect.objectContaining({
+        text: expect.stringContaining('https://tegata.example.com/reset/tok-2'),
+      }))
+    })
+
+    it('should prefer PUBLIC_URL over OIDC_REDIRECT_URI and strip a trailing slash', async () => {
+      nodemailerMock.sendMail.mockResolvedValue(undefined)
+      const service = await buildService({ ...smtp, PUBLIC_URL: 'https://a.example.com/', OIDC_REDIRECT_URI: 'https://b.example.com/cb' })
+
+      await service.sendResetEmail(reset)
+
+      expect(nodemailerMock.sendMail).toHaveBeenCalledWith(expect.objectContaining({
+        text: expect.stringContaining('https://a.example.com/reset/tok-2'),
+      }))
+    })
+
+    it('should reject a PUBLIC_URL that is not an absolute http(s) URL', async () => {
+      await expect(buildService({ ...smtp, PUBLIC_URL: 'tegata.example.com' })).rejects.toThrow(/PUBLIC_URL/)
+      await expect(buildService({ ...smtp, PUBLIC_URL: 'ftp://tegata.example.com' })).rejects.toThrow(/PUBLIC_URL/)
+    })
+
+    it('should stay optional when SMTP_HOST is unset', async () => {
+      await expect(buildService({})).resolves.toBeDefined()
     })
   })
 
@@ -148,7 +188,7 @@ describe('mailService', () => {
 
     it('should include the granted groups and the expiry date in the invite email body', async () => {
       nodemailerMock.sendMail.mockResolvedValue(undefined)
-      const service = await buildService({ SMTP_HOST: 'smtp.example.com' })
+      const service = await buildService({ SMTP_HOST: 'smtp.example.com', PUBLIC_URL: 'https://tegata.example.com' })
 
       await service.sendInviteEmail({
         to: 'a@test.com',
@@ -183,7 +223,7 @@ describe('mailService', () => {
 
     it('should fall back to a generic greeting when displayname is null', async () => {
       nodemailerMock.sendMail.mockResolvedValue(undefined)
-      const service = await buildService({ SMTP_HOST: 'smtp.example.com' })
+      const service = await buildService({ SMTP_HOST: 'smtp.example.com', PUBLIC_URL: 'https://tegata.example.com' })
 
       await service.sendResetEmail({ to: 'b@test.com', displayname: null, token: 'tok-2' })
 
@@ -197,7 +237,7 @@ describe('mailService', () => {
 
     it('should return an error without throwing when the transporter rejects', async () => {
       nodemailerMock.sendMail.mockRejectedValue(new Error('connection refused'))
-      const service = await buildService({ SMTP_HOST: 'smtp.example.com' })
+      const service = await buildService({ SMTP_HOST: 'smtp.example.com', PUBLIC_URL: 'https://tegata.example.com' })
 
       const result = await service.sendInviteEmail({
         to: 'a@test.com',
@@ -211,19 +251,24 @@ describe('mailService', () => {
     })
 
     it('should coerce SMTP_PORT to a number', async () => {
-      await buildService({ SMTP_HOST: 'smtp.example.com', SMTP_PORT: '465' })
+      await buildService({ SMTP_HOST: 'smtp.example.com', SMTP_PORT: '465', PUBLIC_URL: 'https://tegata.example.com' })
 
       expect(nodemailerMock.createTransport).toHaveBeenCalledWith(expect.objectContaining({ port: 465 }))
     })
 
     it('should omit auth when SMTP_USERNAME is not set', async () => {
-      await buildService({ SMTP_HOST: 'smtp.example.com' })
+      await buildService({ SMTP_HOST: 'smtp.example.com', PUBLIC_URL: 'https://tegata.example.com' })
 
       expect(nodemailerMock.createTransport).toHaveBeenCalledWith(expect.objectContaining({ auth: undefined }))
     })
 
     it('should include auth when SMTP_USERNAME is set', async () => {
-      await buildService({ SMTP_HOST: 'smtp.example.com', SMTP_USERNAME: 'user', SMTP_PASSWORD: 'pass' })
+      await buildService({
+        SMTP_HOST: 'smtp.example.com',
+        SMTP_USERNAME: 'user',
+        SMTP_PASSWORD: 'pass',
+        PUBLIC_URL: 'https://tegata.example.com',
+      })
 
       expect(nodemailerMock.createTransport).toHaveBeenCalledWith(expect.objectContaining({
         auth: { user: 'user', pass: 'pass' },
