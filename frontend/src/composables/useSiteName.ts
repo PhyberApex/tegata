@@ -19,7 +19,9 @@ export function useSiteName() {
       if (methods.siteName)
         siteName.value = methods.siteName
     }
-    catch {}
+    catch {
+      // Branding is cosmetic; keep the default name rather than surface an error.
+    }
   }
 
   return { siteName, loadSiteName }

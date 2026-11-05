@@ -39,7 +39,7 @@ export class AuthController {
   methods(@Req() req: Request) {
     return {
       nativePasswordLogin: this.fence.admits(req.ip),
-      siteName: this.config.get<string>('SITE_NAME', 'Tegata'),
+      siteName: this.config.get<string>('SITE_NAME', 'Tegata') || 'Tegata',
     }
   }
 

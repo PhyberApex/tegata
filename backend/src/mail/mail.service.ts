@@ -29,7 +29,7 @@ export class MailService {
   constructor(private config: ConfigService) {
     const host = this.config.get<string>('SMTP_HOST')
     this.sender = this.config.get<string>('SMTP_SENDER', 'Tegata <noreply@example.com>')
-    this.siteName = this.config.get<string>('SITE_NAME', 'Tegata')
+    this.siteName = this.config.get<string>('SITE_NAME', 'Tegata') || 'Tegata'
     this.publicUrl = this.config.get<string>('PUBLIC_URL', 'http://localhost:5173').replace(/\/$/, '')
 
     if (!host) {
