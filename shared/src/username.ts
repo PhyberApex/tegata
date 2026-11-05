@@ -1,7 +1,7 @@
 // The one rule for new usernames, shared by the backend (which enforces it) and
 // the frontend (which checks it before submitting). A deployment can override it
 // with USERNAME_PATTERN; the backend then hands the effective source to the
-// frontend. Existing users that predate the rule are never re-checked.
+// frontend. It gates new usernames only; users already on file are never re-checked.
 export const DEFAULT_USERNAME_PATTERN = '^[a-z0-9][a-z0-9._-]{0,63}$'
 
 export const DEFAULT_USERNAME_RULE = 'lowercase letters, digits, dots, underscores and hyphens; must start with a letter or digit; at most 64 characters'

@@ -2,7 +2,7 @@ import process from 'node:process'
 import { compileUsernamePattern, DEFAULT_USERNAME_PATTERN, isValidUsername, usernameRuleMessage } from '@tegata/shared'
 import { registerDecorator } from 'class-validator'
 
-/** The effective pattern source: USERNAME_PATTERN when set and non-empty, else the shared default. */
+/** A blank USERNAME_PATTERN counts as unset, so the shared default applies. */
 export function usernamePatternSource(): string {
   return process.env.USERNAME_PATTERN?.trim() || DEFAULT_USERNAME_PATTERN
 }

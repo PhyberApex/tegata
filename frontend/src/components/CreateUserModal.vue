@@ -25,7 +25,7 @@ const form = defineModel<CreateUserForm>('form', { required: true })
       <div class="tg-form-field">
         <label for="create-username" class="tg-form-label">Username</label>
         <input id="create-username" v-model="form.username" type="text" class="tg-input" required>
-        <p :class="usernameError(form.username) ? 'tg-form-error' : 'tg-form-hint'">
+        <p :class="usernameError(form.username) ? 'tg-form-error' : 'tg-form-hint'" :role="usernameError(form.username) ? 'alert' : undefined">
           {{ usernameRule() }}
         </p>
       </div>

@@ -5,7 +5,6 @@ import { ref } from 'vue'
 // create-user modal; the default until (or unless) /api/auth/methods answers.
 export const usernamePattern = ref(DEFAULT_USERNAME_PATTERN)
 
-/** Describes the username rule in words — shown as the field hint. */
 export function usernameRule(pattern: string = usernamePattern.value): string {
   return usernameRuleMessage(pattern)
 }
