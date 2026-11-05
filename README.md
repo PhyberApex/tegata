@@ -33,6 +33,13 @@ admin out of SSO.
 - **Tegata never writes Authelia's main configuration.** It reads `configuration.yml` for
   the Access Preview and nothing else.
 
+## 🤖 AI Disclaimer
+
+> **Heads up!** Tegata is developed with heavy use of AI coding tools. Issues and pull
+> requests may be triaged, commented on, or authored by an AI agent, with a human maintainer
+> reviewing before anything is merged. AI-assisted contributions are welcome too; see the
+> [AI policy](CONTRIBUTING.md#ai-policy) for the ground rules.
+
 ## Features
 
 - **Users** — create, edit, delete, disable and re-enable, reset passwords (argon2id). Every
