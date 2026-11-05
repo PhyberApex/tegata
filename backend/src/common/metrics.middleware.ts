@@ -3,6 +3,9 @@ import type { NextFunction, Request, Response } from 'express'
 import { Injectable } from '@nestjs/common'
 import { MetricsService } from './metrics.service'
 
+// Constant label for requests that never hit a route, keeping cardinality bounded.
+const UNMATCHED_ROUTE = 'unmatched'
+
 @Injectable()
 export class MetricsMiddleware implements NestMiddleware {
   constructor(private readonly metricsService: MetricsService) {}
@@ -10,13 +13,12 @@ export class MetricsMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction): void {
     const start = Date.now()
     const { method } = req
-    const route = this.extractRoute(req)
     const requestSize = Number.parseInt(req.get('content-length') || '0', 10)
 
-    if (requestSize > 0)
-      this.metricsService.httpRequestSize.observe({ method, route }, requestSize)
-
     res.on('finish', () => {
+      // req.route is only populated once Express has routed the request, so it
+      // must be resolved here rather than before next().
+      const route = this.extractRoute(req)
       const durationSeconds = (Date.now() - start) / 1000
       const { statusCode } = res
       const responseSize = Number.parseInt(res.get('content-length') || '0', 10)
@@ -35,6 +37,9 @@ export class MetricsMiddleware implements NestMiddleware {
         durationSeconds,
       )
 
+      if (requestSize > 0)
+        this.metricsService.httpRequestSize.observe({ method, route }, requestSize)
+
       if (responseSize > 0)
         this.metricsService.httpResponseSize.observe({ method, route }, responseSize)
     })
@@ -48,9 +53,6 @@ export class MetricsMiddleware implements NestMiddleware {
       return `${prefix}${req.route.path}`
     }
 
-    return req.path
-      .replace(/\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, '/:uuid')
-      .replace(/\/[a-f0-9]{24}/gi, '/:objectid')
-      .replace(/\/\d+/g, '/:id')
+    return UNMATCHED_ROUTE
   }
 }
