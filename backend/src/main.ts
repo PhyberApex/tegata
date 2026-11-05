@@ -1,3 +1,4 @@
+import process from 'node:process'
 import { ValidationPipe } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
@@ -6,8 +7,12 @@ import helmet from 'helmet'
 import { AppModule } from './app.module'
 import { DynamicLogger, installFetchLogger, setDynamicLoggerInstance } from './common'
 import { parseTrustProxy } from './config/parse-trust-proxy'
+import { parseListenPort } from './listen-port'
 
 async function bootstrap() {
+  const port = parseListenPort(process.env.PORT)
+  const host = process.env.HOST?.trim() || '0.0.0.0'
+
   const logger = new DynamicLogger('log')
   setDynamicLoggerInstance(logger)
   installFetchLogger({
@@ -29,6 +34,6 @@ async function bootstrap() {
     exclude: ['/', '/metrics'],
   })
 
-  await app.listen(3000)
+  await app.listen(port, host)
 }
 bootstrap()
