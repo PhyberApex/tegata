@@ -27,7 +27,15 @@ describe('nativeLoginFence', () => {
     expect(fence.admits('10.8.0.2')).toBe(false)
   })
 
+  it('admits IPv4 and IPv6 networks named together', () => {
+    const fence = fenceWith('192.168.0.0/16,fd00::/8')
+
+    expect(fence.admits('fd12:3456::1')).toBe(true)
+    expect(fence.admits('192.168.1.5')).toBe(true)
+    expect(fence.admits('2a00::1')).toBe(false)
+  })
+
   it('refuses to construct on an entry it cannot read, so the boot fails rather than the login', () => {
-    expect(() => fenceWith('192.168.1.0/24,not-a-network')).toThrow('"not-a-network" is not an IPv4 address or CIDR')
+    expect(() => fenceWith('192.168.1.0/24,not-a-network')).toThrow('"not-a-network" is not an IPv4 or IPv6 address or CIDR')
   })
 })

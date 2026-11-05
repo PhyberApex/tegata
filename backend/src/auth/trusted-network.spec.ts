@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_TRUSTED_NETWORKS, isTrustedNetworkAddress, parseIpv4Network, parseTrustedNetworks } from './trusted-network'
+import { DEFAULT_TRUSTED_NETWORKS, isTrustedNetworkAddress, parseIpv4Network, parseIpv6Network, parseTrustedNetworks } from './trusted-network'
 
 const DEFAULTS = parseTrustedNetworks(DEFAULT_TRUSTED_NETWORKS)
 const admitted = (address: string | undefined) => isTrustedNetworkAddress(address, DEFAULTS)
@@ -190,6 +190,86 @@ describe('parseTrustedNetworks', () => {
   })
 
   it('names the entry it cannot read', () => {
-    expect(() => parseTrustedNetworks('10.0.0.0/8,fd00::/8')).toThrow('"fd00::/8" is not an IPv4 address or CIDR')
+    expect(() => parseTrustedNetworks('10.0.0.0/8,fd00::/129')).toThrow('"fd00::/129" is not an IPv4 or IPv6 address or CIDR')
+  })
+
+  it.each([
+    ['fd00::/8:'],
+    ['fd00:::1/8'],
+    ['1:2:3:4:5:6:7:8:9'],
+    ['fd00::/x'],
+    ['gggg::/16'],
+    ['fe80::1%eth0/10'],
+  ])('fails the boot on malformed IPv6 entry %s', (entry) => {
+    expect(() => parseTrustedNetworks(`10.0.0.0/8,${entry}`)).toThrow(`"${entry}"`)
+  })
+})
+
+describe('parseIpv6Network', () => {
+  it('refuses a network inside the IPv4-mapped range, which could never match', () => {
+    expect(parseIpv6Network('::ffff:10.0.0.0/104')).toBeNull()
+  })
+
+  it('reads :: and 1:: ', () => {
+    expect(parseIpv6Network('::/0')).toEqual([0n, 0])
+    expect(parseIpv6Network('1::')).toEqual([1n << 112n, 128])
+  })
+
+  it('reads a CIDR, masking host bits off', () => {
+    expect(parseIpv6Network('fd12:3456::1/8')).toEqual([0xFD00n << 112n, 8])
+  })
+
+  it('reads a bare address as a /128', () => {
+    expect(parseIpv6Network('2001:db8::1')).toEqual([(0x20010DB8n << 96n) | 1n, 128])
+  })
+
+  it('refuses an IPv4 entry', () => {
+    expect(parseIpv6Network('10.0.0.0/8')).toBeNull()
+  })
+})
+
+describe('ipv6 networks', () => {
+  const mixed = parseTrustedNetworks('192.168.0.0/16,fd00::/8')
+
+  it('admits fd12:3456::1 and 192.168.1.5, refuses 2a00::1', () => {
+    expect(isTrustedNetworkAddress('fd12:3456::1', mixed)).toBe(true)
+    expect(isTrustedNetworkAddress('192.168.1.5', mixed)).toBe(true)
+    expect(isTrustedNetworkAddress('2a00::1', mixed)).toBe(false)
+  })
+
+  it('strips a zone id before matching', () => {
+    const linkLocal = parseTrustedNetworks('fe80::/10')
+    expect(isTrustedNetworkAddress('fe80::1%eth0', linkLocal)).toBe(true)
+    expect(isTrustedNetworkAddress('fe80::1%', linkLocal)).toBe(false)
+  })
+
+  it('matches full-form and dotted-tail spellings', () => {
+    const doc = parseTrustedNetworks('2001:db8::/32')
+    expect(isTrustedNetworkAddress('2001:0db8:0000:0000:0000:0000:0000:0001', doc)).toBe(true)
+    expect(isTrustedNetworkAddress('2001:db9::1', doc)).toBe(false)
+    expect(isTrustedNetworkAddress('::ffff:10.0.0.1', doc)).toBe(false)
+  })
+
+  it('does not let an IPv6 network admit IPv4 or the reverse', () => {
+    expect(isTrustedNetworkAddress('0.0.0.1', parseTrustedNetworks('::/0'))).toBe(false)
+    expect(isTrustedNetworkAddress('fd00::1', parseTrustedNetworks('0.0.0.0/0'))).toBe(false)
+  })
+
+  it('matches a bare /128 exactly', () => {
+    const one = parseTrustedNetworks('fd00::5')
+    expect(isTrustedNetworkAddress('fd00::5', one)).toBe(true)
+    expect(isTrustedNetworkAddress('fd00::6', one)).toBe(false)
+  })
+
+  it('still unwraps IPv4-mapped addresses against IPv4 networks', () => {
+    expect(isTrustedNetworkAddress('::ffff:192.168.1.5', mixed)).toBe(true)
+  })
+
+  it.each([
+    ['fd00::1::2'],
+    ['fd00:1'],
+    ['1:2:3:4:5:6:7:8:9'],
+  ])('refuses unreadable %s', (a) => {
+    expect(isTrustedNetworkAddress(a, mixed)).toBe(false)
   })
 })
