@@ -1,5 +1,4 @@
 import type { MiddlewareConsumer, NestModule } from '@nestjs/common'
-import { join } from 'node:path'
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
@@ -18,6 +17,7 @@ import { InvitesModule } from './invites/invites.module'
 import { MetricsModule } from './metrics/metrics.module'
 import { ProfileModule } from './profile/profile.module'
 import { ResetTokensModule } from './reset-tokens/reset-tokens.module'
+import { staticOptions } from './static-options'
 import { StatusModule } from './status/status.module'
 import { UsersModule } from './users/users.module'
 
@@ -30,10 +30,7 @@ import { UsersModule } from './users/users.module'
     ThrottlerModule.forRoot([
       { ttl: 60_000, limit: 100 },
     ]),
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', '..', 'frontend', 'dist'),
-      exclude: ['/metrics'],
-    }),
+    ServeStaticModule.forRoot(staticOptions()),
     AccessPreviewModule,
     DatabaseModule,
     AuthModule,
