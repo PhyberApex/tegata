@@ -1,3 +1,4 @@
+import { hash, verify } from 'argon2'
 import { describe, expect, it } from 'vitest'
 import { parseArgon2Options } from './argon2-options'
 
@@ -31,5 +32,14 @@ describe('parseArgon2Options', () => {
   it('requires memory of at least 8 KiB per lane', () => {
     expect(() => from({ ARGON2_MEMORY_KIB: '31' })).toThrow(/at least 8 times/)
     expect(from({ ARGON2_MEMORY_KIB: '32' })).toMatchObject({ memoryCost: 32 })
+  })
+
+  it('produces hashes carrying the configured parameters, and old hashes still verify', async () => {
+    const old = await hash('pw', from({}))
+    const tuned = await hash('pw', from({ ARGON2_MEMORY_KIB: '19456', ARGON2_ITERATIONS: '2', ARGON2_PARALLELISM: '1' }))
+
+    expect(tuned).toMatch(/\$m=19456,(t=2,p=1|p=1,t=2)\$/)
+    expect(await verify(old, 'pw')).toBe(true)
+    expect(await verify(tuned, 'pw')).toBe(true)
   })
 })
