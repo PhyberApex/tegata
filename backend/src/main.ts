@@ -6,12 +6,14 @@ import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import { AppModule } from './app.module'
 import { DynamicLogger, installFetchLogger, setDynamicLoggerInstance } from './common'
+import { assertArgon2Options } from './config/argon2-options'
 import { parseTrustProxy } from './config/parse-trust-proxy'
 import { assertUsernamePattern } from './config/username-pattern'
 import { parseListenPort } from './listen-port'
 
 async function bootstrap() {
   assertUsernamePattern()
+  assertArgon2Options()
   const port = parseListenPort(process.env.PORT)
   const host = process.env.HOST?.trim() || '0.0.0.0'
 

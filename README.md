@@ -180,6 +180,7 @@ open — it is open on purpose.
 | `SITE_NAME` | no | `Tegata` | the name shown in invite and reset emails, the login, register and reset pages, and the browser tab |
 | `TRUST_PROXY` | no | `1` | the hops between the client and Tegata: a count (`2`), IPs/CIDRs (`10.0.0.0/8,172.16.0.0/12`) or `loopback`/`linklocal`/`uniquelocal`; an empty or unparseable value refuses to boot |
 | `USERNAME_PATTERN` | no | `^[a-z0-9][a-z0-9._-]{0,63}$` | the regular expression new usernames (created by an admin or chosen on invite redemption) must match; existing users are never re-checked; a pattern that does not compile refuses to boot |
+| `ARGON2_MEMORY_KIB` / `ARGON2_ITERATIONS` / `ARGON2_PARALLELISM` | no | `65536` / `3` / `4` | the argon2id cost of password hashes Tegata generates (see [Tuning password hashing](#tuning-password-hashing)); positive integers, memory at least 8 × parallelism; anything else refuses to boot |
 | `STATUS_ENDPOINT_TOKEN` | no | — | enables `GET /api/status` and is the token it requires (`Authorization: Bearer <token>`, or `?token=`); unset, the endpoint is a 404 |
 | `NODE_ENV` | no | — | `production` sets the `Secure` flag on cookies; set it |
 
@@ -190,6 +191,10 @@ Tailscale), set `TRUST_PROXY` to the hop count or to the addresses of your proxi
 changes who the fence admits: too low and `req.ip` is an inner proxy, which may sit on a private
 address and let everyone in; too high lets a caller spoof their address with their own
 `X-Forwarded-For`. With no proxy in front, set `TRUST_PROXY=0`.
+
+### Tuning password hashing
+
+Tegata hashes the passwords it writes to the users file with argon2id, by default 64 MiB of memory, 3 iterations and 4 lanes. On a Raspberry Pi or a small VPS that can make creating users and redeeming invites slow, or run out of memory under concurrency; lower `ARGON2_MEMORY_KIB`, `ARGON2_ITERATIONS` and `ARGON2_PARALLELISM` to suit the host (for example `19456`, `2`, `1`). See [Authelia's argon2 guidance](https://www.authelia.com/reference/guides/passwords/#argon2) for how to choose values. Changing them only affects hashes generated afterwards: existing hashes keep their own parameters and still verify. The break-glass admin hash is only ever verified, so it is unaffected.
 
 ### Dashboard widget
 

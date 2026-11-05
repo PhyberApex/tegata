@@ -4,6 +4,7 @@ import { ConflictException, Injectable, Logger, NotFoundException, OnModuleInit,
 import { ConfigService } from '@nestjs/config'
 import * as argon2 from 'argon2'
 import * as yaml from 'js-yaml'
+import { parseArgon2Options } from '../config/argon2-options'
 import { DatabaseService } from '../database/database.service'
 import { GroupsService } from '../groups/groups.service'
 import { getGuardedGroups } from './guarded-groups'
@@ -35,13 +36,7 @@ export class UsersService implements OnModuleInit {
   private readonly guardedGroups: string[]
   private readonly logger = new Logger(UsersService.name)
 
-  private static readonly ARGON2_OPTIONS: argon2.HashOptions = {
-    type: argon2.argon2id,
-    memoryCost: 65536,
-    timeCost: 3,
-    parallelism: 4,
-    hashLength: 32,
-  }
+  private readonly argon2Options: argon2.HashOptions
 
   constructor(
     private config: ConfigService,
@@ -53,6 +48,7 @@ export class UsersService implements OnModuleInit {
       '/authelia-config/users_database.yml',
     )
     this.guardedGroups = getGuardedGroups(this.config)
+    this.argon2Options = parseArgon2Options(key => this.config.get<string>(key))
   }
 
   onModuleInit() {
@@ -395,7 +391,7 @@ export class UsersService implements OnModuleInit {
     for (const group of groups)
       this.groupsService.ensureGroup(group)
 
-    const passwordHash = await argon2.hash(password, UsersService.ARGON2_OPTIONS)
+    const passwordHash = await argon2.hash(password, this.argon2Options)
 
     this.mutateDatabase((db) => {
       this.assertUsernameFree(db, username)
@@ -527,7 +523,7 @@ export class UsersService implements OnModuleInit {
   async resetPassword(username: string, newPassword: string) {
     this.findUserOrThrow(this.readDatabaseOrThrow(), username)
 
-    const passwordHash = await argon2.hash(newPassword, UsersService.ARGON2_OPTIONS)
+    const passwordHash = await argon2.hash(newPassword, this.argon2Options)
 
     // Looked up again rather than reused: the user may have been deleted while the hash ran.
     this.mutateDatabase((db) => {
