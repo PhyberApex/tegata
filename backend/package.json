@@ -41,7 +41,7 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "5.0.6",
     "@types/jsonwebtoken": "9.0.10",
-    "@types/node": "24.19.2",
+    "@types/node": "26.6.6",
     "@types/nodemailer": "8.0.2",
     "@vitest/coverage-v8": "5.0.5",
     "typescript": "6.0.3",
