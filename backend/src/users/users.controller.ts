@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
 import { IsArray, IsBoolean, IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
 import { AuthGuard } from '../auth/auth.guard'
+import { IsUsername } from '../config/username-pattern'
 import { UsersService } from './users.service'
 
-class CreateUserDto {
+export class CreateUserDto {
   @IsString()
-  @MinLength(1)
+  @IsUsername()
   username!: string
 
   @IsString()

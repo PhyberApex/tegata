@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Bundle } from '../types'
 import type { CreateUserForm } from '../types/forms'
+import { usernameError, usernameRule } from '../composables/useRegisterForm'
 import FormActions from './FormActions.vue'
 import FormError from './FormError.vue'
 import GroupsField from './GroupsField.vue'
@@ -24,6 +25,9 @@ const form = defineModel<CreateUserForm>('form', { required: true })
       <div class="tg-form-field">
         <label for="create-username" class="tg-form-label">Username</label>
         <input id="create-username" v-model="form.username" type="text" class="tg-input" required>
+        <p :class="usernameError(form.username) ? 'tg-form-error' : 'tg-form-hint'" :role="usernameError(form.username) ? 'alert' : undefined">
+          {{ usernameRule() }}
+        </p>
       </div>
       <div class="tg-form-field">
         <label for="create-displayname" class="tg-form-label">Display Name</label>

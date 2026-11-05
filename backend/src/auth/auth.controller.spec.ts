@@ -2,6 +2,7 @@ import type { Mocked } from 'vitest'
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Test, TestingModule } from '@nestjs/testing'
+import { DEFAULT_USERNAME_PATTERN } from '@tegata/shared'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthController } from './auth.controller'
 import { AuthService } from './auth.service'
@@ -100,11 +101,11 @@ describe('authController', () => {
 
   describe('methods', () => {
     it('should offer native password login to a caller inside the fence', () => {
-      expect(controller.methods({ ip: '192.168.1.42' } as any)).toEqual({ nativePasswordLogin: true, siteName: 'Tegata' })
+      expect(controller.methods({ ip: '192.168.1.42' } as any)).toEqual({ nativePasswordLogin: true, usernamePattern: DEFAULT_USERNAME_PATTERN, siteName: 'Tegata' })
     })
 
     it('should withhold native password login from a caller outside the fence', () => {
-      expect(controller.methods({ ip: '203.0.113.5' } as any)).toEqual({ nativePasswordLogin: false, siteName: 'Tegata' })
+      expect(controller.methods({ ip: '203.0.113.5' } as any)).toEqual({ nativePasswordLogin: false, usernamePattern: DEFAULT_USERNAME_PATTERN, siteName: 'Tegata' })
     })
   })
 

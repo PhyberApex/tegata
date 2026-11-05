@@ -1,6 +1,7 @@
 import type { RegisterFormFields } from './useRegisterForm'
+import { DEFAULT_USERNAME_PATTERN } from '@tegata/shared'
 import { describe, expect, it } from 'vitest'
-import { inviteFieldsPatch, passwordMatchError } from './useRegisterForm'
+import { inviteFieldsPatch, passwordMatchError, usernameError, usernamePattern } from './useRegisterForm'
 
 function form(overrides: Partial<RegisterFormFields> = {}): RegisterFormFields {
   return {
@@ -52,5 +53,30 @@ describe('inviteFieldsPatch', () => {
       lockedDisplayname: false,
       lockedEmail: false,
     })
+  })
+})
+
+describe('usernameError', () => {
+  it.each(['john doe', 'John', 'a/b'])('rejects %j with a message naming the rule', (username) => {
+    expect(usernameError(username)).toContain('lowercase letters, digits')
+  })
+
+  it('accepts john.doe-2', () => {
+    expect(usernameError('john.doe-2')).toBe('')
+  })
+
+  it('stays quiet while the field is empty', () => {
+    expect(usernameError('')).toBe('')
+  })
+
+  it('honours a custom pattern', () => {
+    expect(usernameError('John', '^[a-zA-Z0-9]+$')).toBe('')
+    expect(usernameError('john.doe', '^[a-zA-Z0-9]+$')).toContain('^[a-zA-Z0-9]+$')
+  })
+
+  it('follows the pattern the backend reports', () => {
+    usernamePattern.value = '^[a-zA-Z0-9]+$'
+    expect(usernameError('John')).toBe('')
+    usernamePattern.value = DEFAULT_USERNAME_PATTERN
   })
 })
