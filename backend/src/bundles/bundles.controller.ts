@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
 import { IsOptional, IsString } from 'class-validator'
 import { AuthGuard } from '../auth/auth.guard'
-import { IsNameList, IsTrimmedNonEmpty, TrimPipe } from '../common/name-validation'
+import { IsGroupList, IsTrimmedNonEmpty, TrimPipe } from '../common/name-validation'
 import { BundlesService } from './bundles.service'
 
 export class CreateBundleDto {
@@ -13,7 +13,7 @@ export class CreateBundleDto {
   description?: string
 
   @IsOptional()
-  @IsNameList()
+  @IsGroupList()
   groups?: string[]
 }
 
@@ -21,7 +21,7 @@ export class UpdateBundleDto {
   @IsString()
   description!: string
 
-  @IsNameList()
+  @IsGroupList()
   groups!: string[]
 }
 

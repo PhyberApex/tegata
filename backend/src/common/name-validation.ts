@@ -19,7 +19,7 @@ export function IsTrimmedNonEmpty() {
 }
 
 /** An array of trimmed, non-empty, unique strings. */
-export function IsNameList() {
+export function IsGroupList() {
   return applyDecorators(
     Transform(({ value }) => (Array.isArray(value)
       ? value.map(trimValue)

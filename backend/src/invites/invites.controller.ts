@@ -1,12 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common'
 import { IsBoolean, IsEmail, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator'
 import { AuthGuard } from '../auth/auth.guard'
-import { IsNameList, IsTrimmedNonEmpty } from '../common/name-validation'
+import { IsGroupList, IsTrimmedNonEmpty } from '../common/name-validation'
 import { IsUsername } from '../config/username-pattern'
 import { InvitesService, isPendingInvite } from './invites.service'
 
 export class CreateInviteDto {
-  @IsNameList()
+  @IsGroupList()
   groups!: string[]
 
   @IsOptional()
