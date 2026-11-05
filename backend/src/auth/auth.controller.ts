@@ -110,10 +110,10 @@ export class AuthController {
     try {
       const { state, codeVerifier } = JSON.parse(raw) as { state: string, codeVerifier: string }
 
-      const currentUrl = new URL(
-        req.originalUrl,
-        `${req.protocol}://${req.get('host')}`,
-      )
+      // redirect_uri sent to the token endpoint is derived from this URL, so
+      // build it from config rather than the Host header / proxy headers.
+      const currentUrl = new URL(this.config.getOrThrow<string>('OIDC_REDIRECT_URI'))
+      currentUrl.search = new URL(req.originalUrl, 'http://placeholder').search
 
       const { groups, username } = await this.oidcService.exchangeCode(currentUrl, state, codeVerifier)
       this.logger.debug(`User: ${username}`)
