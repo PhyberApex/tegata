@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
-import { IsArray, IsBoolean, IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
+import { IsBoolean, IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
 import { AuthGuard } from '../auth/auth.guard'
+import { IsNameList, IsTrimmedNonEmpty } from '../common/name-validation'
 import { IsUsername } from '../config/username-pattern'
 import { UsersService } from './users.service'
 
@@ -9,7 +10,7 @@ export class CreateUserDto {
   @IsUsername()
   username!: string
 
-  @IsString()
+  @IsTrimmedNonEmpty()
   displayname!: string
 
   @IsEmail()
@@ -19,14 +20,13 @@ export class CreateUserDto {
   @MinLength(8)
   password!: string
 
-  @IsArray()
-  @IsString({ each: true })
+  @IsNameList()
   groups!: string[]
 }
 
-class UpdateUserDto {
+export class UpdateUserDto {
   @IsOptional()
-  @IsString()
+  @IsTrimmedNonEmpty()
   displayname?: string
 
   @IsOptional()
@@ -34,8 +34,7 @@ class UpdateUserDto {
   email?: string
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
+  @IsNameList()
   groups?: string[]
 
   @IsOptional()

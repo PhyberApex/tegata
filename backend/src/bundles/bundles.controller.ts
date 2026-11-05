@@ -1,11 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
-import { IsArray, IsOptional, IsString, MinLength } from 'class-validator'
+import { IsOptional, IsString } from 'class-validator'
 import { AuthGuard } from '../auth/auth.guard'
+import { IsNameList, IsTrimmedNonEmpty, TrimPipe } from '../common/name-validation'
 import { BundlesService } from './bundles.service'
 
-class CreateBundleDto {
-  @IsString()
-  @MinLength(1)
+export class CreateBundleDto {
+  @IsTrimmedNonEmpty()
   name!: string
 
   @IsOptional()
@@ -13,17 +13,15 @@ class CreateBundleDto {
   description?: string
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
+  @IsNameList()
   groups?: string[]
 }
 
-class UpdateBundleDto {
+export class UpdateBundleDto {
   @IsString()
   description!: string
 
-  @IsArray()
-  @IsString({ each: true })
+  @IsNameList()
   groups!: string[]
 }
 
@@ -45,13 +43,13 @@ export class BundlesController {
 
   @Patch(':name')
   @UseGuards(AuthGuard)
-  update(@Param('name') name: string, @Body() dto: UpdateBundleDto) {
+  update(@Param('name', TrimPipe) name: string, @Body() dto: UpdateBundleDto) {
     return this.bundlesService.updateBundle(name, dto.description, dto.groups)
   }
 
   @Delete(':name')
   @UseGuards(AuthGuard)
-  remove(@Param('name') name: string) {
+  remove(@Param('name', TrimPipe) name: string) {
     this.bundlesService.deleteBundle(name)
     return { success: true }
   }

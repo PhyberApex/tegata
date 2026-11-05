@@ -1,12 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
-import { IsBoolean, IsOptional, IsString, MinLength } from 'class-validator'
+import { IsBoolean, IsOptional, IsString } from 'class-validator'
 import { AuthGuard } from '../auth/auth.guard'
+import { IsTrimmedNonEmpty, TrimPipe } from '../common/name-validation'
 import { GroupDeletionService } from './group-deletion.service'
 import { GroupsService } from './groups.service'
 
-class CreateGroupDto {
-  @IsString()
-  @MinLength(1)
+export class CreateGroupDto {
+  @IsTrimmedNonEmpty()
   name!: string
 
   @IsOptional()
@@ -41,12 +41,12 @@ export class GroupsController {
   }
 
   @Patch(':name')
-  update(@Param('name') name: string, @Body() dto: UpdateGroupDto) {
+  update(@Param('name', TrimPipe) name: string, @Body() dto: UpdateGroupDto) {
     return this.groupsService.updateGroup(name, dto.description)
   }
 
   @Delete(':name')
-  remove(@Param('name') name: string, @Body() dto: DeleteGroupDto = {}) {
+  remove(@Param('name', TrimPipe) name: string, @Body() dto: DeleteGroupDto = {}) {
     this.groupDeletion.deleteGroup(name, dto.confirm ?? false)
     return { success: true }
   }
