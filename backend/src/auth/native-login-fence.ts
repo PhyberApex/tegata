@@ -1,4 +1,4 @@
-import type { Ipv4Network } from './trusted-network'
+import type { TrustedNetwork } from './trusted-network'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { DEFAULT_TRUSTED_NETWORKS, isTrustedNetworkAddress, parseTrustedNetworks } from './trusted-network'
@@ -11,7 +11,7 @@ import { DEFAULT_TRUSTED_NETWORKS, isTrustedNetworkAddress, parseTrustedNetworks
  */
 @Injectable()
 export class NativeLoginFence {
-  private readonly networks: readonly Ipv4Network[]
+  private readonly networks: readonly TrustedNetwork[]
 
   constructor(config: ConfigService) {
     this.networks = parseTrustedNetworks(config.get<string>('NATIVE_LOGIN_CIDRS', DEFAULT_TRUSTED_NETWORKS))

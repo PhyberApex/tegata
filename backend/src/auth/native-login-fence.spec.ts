@@ -28,6 +28,6 @@ describe('nativeLoginFence', () => {
   })
 
   it('refuses to construct on an entry it cannot read, so the boot fails rather than the login', () => {
-    expect(() => fenceWith('192.168.1.0/24,not-a-network')).toThrow('"not-a-network" is not an IPv4 address or CIDR')
+    expect(() => fenceWith('192.168.1.0/24,not-a-network')).toThrow('"not-a-network" is not an IPv4 or IPv6 address or CIDR')
   })
 })
