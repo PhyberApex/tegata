@@ -61,8 +61,10 @@ export class MailService {
 
   private resolvePublicUrl(smtpHost: string | undefined): string {
     const explicit = this.config.get<string>('PUBLIC_URL')
-    if (explicit)
-      return this.parseHttpOrigin('PUBLIC_URL', explicit, true)
+    if (explicit) {
+      this.parseHttpUrl('PUBLIC_URL', explicit)
+      return explicit.replace(/\/$/, '')
+    }
 
     if (!smtpHost)
       return ''
@@ -71,10 +73,10 @@ export class MailService {
     if (!redirectUri) {
       throw new Error('SMTP_HOST is set but PUBLIC_URL is not. Set PUBLIC_URL (e.g. https://tegata.example.com) or OIDC_REDIRECT_URI so email links can be built.')
     }
-    return this.parseHttpOrigin('OIDC_REDIRECT_URI', redirectUri, false)
+    return this.parseHttpUrl('OIDC_REDIRECT_URI', redirectUri).origin
   }
 
-  private parseHttpOrigin(name: string, value: string, keepPath: boolean): string {
+  private parseHttpUrl(name: string, value: string): URL {
     let url: URL
     try {
       url = new URL(value)
@@ -84,9 +86,7 @@ export class MailService {
     }
     if (url.protocol !== 'http:' && url.protocol !== 'https:')
       throw new Error(`${name} must be an absolute http(s) URL, got "${value}"`)
-    return keepPath
-      ? value.replace(/\/$/, '')
-      : url.origin
+    return url
   }
 
   async sendInviteEmail(input: InviteEmailInput): Promise<MailResult> {
