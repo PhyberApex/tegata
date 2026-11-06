@@ -115,7 +115,7 @@ type RuleClassification
   = | { kind: 'skip' }
     | { kind: 'deny', domains: string[], groups: string[] | undefined }
     | { kind: 'placeholder', domains: string[], policy: string }
-    | { kind: 'modeled', domains: string[], group: string, policy: string }
+    | { kind: 'modeled', domains: string[], groups: string[], policy: string }
     | { kind: 'unparsed', groups: string[] }
 
 function parseRuleAttributes(rule: AccessRule): RuleAttributes {
@@ -162,8 +162,11 @@ function matchNoGroupSkip(attrs: RuleAttributes): RuleClassification | undefined
 }
 
 function matchModeled(rule: AccessRule, attrs: RuleAttributes): RuleClassification | undefined {
+  const groups = [
+    ...new Set(wholeSubjectGroups(rule.subject)),
+  ]
   const modeled = attrs.placeholderDomains.length === 0
-    && isSingleGroupSubject(attrs.subjects, attrs.groups)
+    && groups.length > 0
     && attrs.qualifiers.length === 0
     && rule.domain_regex === undefined
     && attrs.domains.length > 0
@@ -172,7 +175,7 @@ function matchModeled(rule: AccessRule, attrs: RuleAttributes): RuleClassificati
     ? {
         kind: 'modeled',
         domains: attrs.domains,
-        group: attrs.groups[0],
+        groups,
         policy: attrs.policy,
       }
     : undefined
@@ -214,9 +217,11 @@ function applyPlaceholderGrants(domains: string[], policy: string, knownGroups: 
   }
 }
 
-function applyModeledGrant(domains: string[], group: string, policy: string, denied: DeniedDomains, previewFor: PreviewFor): void {
-  for (const domain of domains.filter(d => denied.allows(group, d)))
-    previewFor(group).domains.push({ domain, policy, source: 'group-subject' })
+function applyModeledGrant(domains: string[], groups: string[], policy: string, denied: DeniedDomains, previewFor: PreviewFor): void {
+  for (const group of groups) {
+    for (const domain of domains.filter(d => denied.allows(group, d)))
+      previewFor(group).domains.push({ domain, policy, source: 'group-subject' })
+  }
 }
 
 function applyUnparsedRuleNotes(groups: string[], rule: AccessRule, previewFor: PreviewFor): void {
@@ -238,7 +243,7 @@ function collectAccessRuleGrants(rules: AccessRule[], knownGroups: string[], pre
         applyPlaceholderGrants(classification.domains, classification.policy, knownGroups, denied, previewFor)
         continue
       case 'modeled':
-        applyModeledGrant(classification.domains, classification.group, classification.policy, denied, previewFor)
+        applyModeledGrant(classification.domains, classification.groups, classification.policy, denied, previewFor)
         continue
       case 'unparsed':
         applyUnparsedRuleNotes(classification.groups, rule, previewFor)
