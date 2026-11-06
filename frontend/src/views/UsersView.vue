@@ -127,6 +127,7 @@ function openResetLink(username: string) {
 
 function openDelete(username: string) {
   deleteTarget.value = username
+  modalAction.error.value = ''
   showDeleteConfirm.value = true
 }
 
