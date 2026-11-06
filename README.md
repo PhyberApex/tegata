@@ -310,12 +310,12 @@ either role.
 | Area | Routes |
 |---|---|
 | Auth | `GET /api/auth/methods`, `POST /api/auth/login` (fenced, 5/min), `POST /api/auth/logout`, `GET /api/auth/check`, `GET /api/auth/oidc/login`, `GET /api/auth/oidc/callback` |
-| Users | `GET/POST /api/users`, `PATCH/DELETE /api/users/:username`, `POST /api/users/:username/reset-password` |
+| Users | `GET/POST /api/users`, `PATCH/DELETE /api/users/:username` |
 | Groups | `GET/POST /api/groups`, `PATCH/DELETE /api/groups/:name`, `GET /api/access-preview` |
 | Bundles | `GET/POST /api/bundles`, `PATCH/DELETE /api/bundles/:name` |
 | Invites | `GET/POST /api/invites`, `DELETE /api/invites/:id`, `POST /api/invites/:id/send`, public `GET /api/invites/:token/validate` and `POST /api/invites/:token/redeem` |
 | Reset tokens | `GET/POST /api/reset-tokens`, `DELETE /api/reset-tokens/:id`, `POST /api/reset-tokens/:id/send`, public validate and redeem under `/api/reset-tokens/:token` |
-| Self-service | `GET/PATCH /api/profile`, `POST /api/profile/password` |
+| Self-service | `PATCH /api/profile`, `POST /api/profile/password` |
 | Integrity | `GET /api/users/database-integrity`, `POST /api/users/database-integrity/accept-baseline` |
 | Infra | `GET /api/health`, `GET /api/status` (a user/invite summary for a dashboard widget; 404 unless `STATUS_ENDPOINT_TOKEN` is set), `GET /metrics`, `GET/POST /api/control/log-level` |
 
