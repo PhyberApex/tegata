@@ -117,6 +117,70 @@ describe('buildAccessPreviews', () => {
     })
   })
 
+  describe('group-subject OR lists', () => {
+    it('should grant the domain to every group in an OR-list subject', () => {
+      const config = {
+        access_control: {
+          rules: [
+            {
+              domain: 'photos.example.com',
+              subject: ['group:a', 'group:b'],
+              policy: 'one_factor',
+            },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['a', 'b'])
+
+      for (const group of ['a', 'b']) {
+        expect(previewFor(previews, group).domains).toEqual([
+          { domain: 'photos.example.com', policy: 'one_factor', source: 'group-subject' },
+        ])
+        expect(previewFor(previews, group).notes).toEqual([])
+      }
+    })
+
+    it('should grant a group listed alongside a non-group subject without a note', () => {
+      const config = {
+        access_control: {
+          rules: [
+            {
+              domain: 'photos.example.com',
+              subject: ['group:a', 'user:bob'],
+              policy: 'one_factor',
+            },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['a'])
+
+      expect(previewFor(previews, 'a').domains).toHaveLength(1)
+      expect(previewFor(previews, 'a').notes).toEqual([])
+    })
+
+    it('should let a deny decide the domain for only its own group', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: 'photos.example.com', subject: 'group:a', policy: 'deny' },
+            {
+              domain: 'photos.example.com',
+              subject: ['group:a', 'group:b'],
+              policy: 'one_factor',
+            },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['a', 'b'])
+
+      expect(previewFor(previews, 'a').domains).toEqual([])
+      expect(previewFor(previews, 'b').domains).toHaveLength(1)
+    })
+  })
+
   describe('rule order', () => {
     it('should let a deny ahead of a placeholder grant decide that domain', () => {
       const config = {
@@ -226,13 +290,15 @@ describe('buildAccessPreviews', () => {
   })
 
   describe('unparsed group-referencing rules', () => {
-    it('should surface multi-subject rules as notes for each referenced group', () => {
+    it('should surface an inner AND list of groups as notes for each referenced group', () => {
       const config = {
         access_control: {
           rules: [
             {
               domain: 'x.example.com',
-              subject: ['group:a', 'group:b'],
+              subject: [
+                ['group:a', 'group:b'],
+              ],
               policy: 'two_factor',
             },
           ],
@@ -244,6 +310,7 @@ describe('buildAccessPreviews', () => {
       expect(previewFor(previews, 'a').domains).toEqual([])
       expect(previewFor(previews, 'a').notes).toHaveLength(1)
       expect(previewFor(previews, 'a').notes[0]).toContain('x.example.com')
+      expect(previewFor(previews, 'b').domains).toEqual([])
       expect(previewFor(previews, 'b').notes).toHaveLength(1)
     })
 
