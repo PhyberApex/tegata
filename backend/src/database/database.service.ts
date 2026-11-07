@@ -1,3 +1,4 @@
+import process from 'node:process'
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import Database from 'better-sqlite3'
@@ -10,7 +11,22 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     const dbPath = this.config.get<string>('TEGATA_DB_PATH', '/data/tegata.db')
-    this.db = new Database(dbPath)
+    try {
+      this.db = new Database(dbPath)
+    }
+    catch (err) {
+      const uid = process.getuid?.()
+      const reason = err instanceof Error
+        ? err.message
+        : String(err)
+      throw new Error(
+        `Cannot open the Tegata database at ${dbPath} (${reason}). The directory must exist and be writable by `
+        + `the uid Tegata runs as${uid === undefined
+          ? ''
+          : ` (currently ${uid})`}; if the container runs with `
+          + `\`user:\`, chown the /data volume to that uid.`,
+      )
+    }
     this.db.pragma('journal_mode = WAL')
     // Retry internally on SQLITE_BUSY instead of throwing immediately — a transient lock
     // contention shouldn't make writeDatabase()'s baseline-hash bookkeeping fail and falsely

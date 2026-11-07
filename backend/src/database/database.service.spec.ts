@@ -55,6 +55,13 @@ describe('databaseService', () => {
   })
 
   describe('onModuleInit', () => {
+    it('should fail with a readable message naming the path and the uid hint when the file cannot be opened', () => {
+      databaseMock.ctor.mockImplementationOnce(() => {
+        throw new Error('unable to open database file')
+      })
+      expect(() => service.onModuleInit()).toThrow(/Cannot open the Tegata database at \/tmp\/test-tegata\.db.*unable to open database file.*writable by the uid/s)
+    })
+
     it('should open database with configured path', () => {
       expect(databaseMock.ctor).toHaveBeenCalledWith('/tmp/test-tegata.db')
     })

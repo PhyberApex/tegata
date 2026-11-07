@@ -68,9 +68,11 @@ From zero to an admin login, assuming Authelia is already running with the file 
   client that gets a private address is inside the fence on purpose. The fence is a
   reachability precondition, not an authentication factor; the password is still what
   authenticates, so pick a long one.
-- **The container runs as root.** Authelia keeps `users_database.yml` root-owned and `0600`,
-  and Tegata is its writer. The example compose file drops every capability, forbids
-  privilege escalation and mounts the root filesystem read-only instead.
+- **The container runs as root by default**, because Authelia's default is a root-owned
+  `0600` `users_database.yml` and Tegata is its writer. The example compose file drops every
+  capability, forbids privilege escalation and mounts the root filesystem read-only instead.
+  Nothing in Tegata needs uid 0: if your Authelia runs as another uid, run Tegata as the same
+  uid with `user: "1000:1000"` and make sure the users file and `/data` are writable by it.
 - **Tegata never writes Authelia's main configuration.** It reads `configuration.yml` for
   the Access Preview and nothing else.
 
