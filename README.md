@@ -122,6 +122,22 @@ From zero to an admin login, assuming Authelia is already running with the file 
   plus `tegata_native_login_total`, which should stay flat), a runtime log-level endpoint,
   and `/api/health`.
 
+## Compatibility
+
+Tegata is tested against **Authelia 4.39** (the file authentication backend, `users_database.yml`).
+It assumes the per-user keys `displayname`, `password`, `email`, `groups` and `disabled`. Older
+4.3x versions are untested rather than known to be broken.
+
+- **Unknown per-user keys are preserved, not shown.** Authelia 4.39 added further per-user
+  attributes (`given_name`, `family_name`, the `extra:` map and friends). Tegata keeps them
+  verbatim on every write, but the UI neither shows nor lets you edit them. Edit those in the
+  file directly.
+- **Access Preview scope.** It understands `access_control.rules`, `{group}` placeholders and
+  OIDC `authorization_policies` only. Anything else in `configuration.yml` is not reflected.
+- **Password hashes.** Tegata writes argon2id. Authelia also accepts other digests it finds in
+  the file, and Tegata never rewrites a hash it did not create — only a password set or reset
+  through Tegata produces a new argon2id hash.
+
 ## Running it
 
 The image is `ghcr.io/phyberapex/tegata`, built for `linux/amd64` and `linux/arm64`. Pin a
