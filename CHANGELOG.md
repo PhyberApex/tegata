@@ -1,5 +1,46 @@
 # Changelog
 
+## [2.0.0](https://github.com/PhyberApex/tegata/compare/v1.0.1...v2.0.0) (2026-11-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **backend:** require or derive PUBLIC_URL when SMTP_HOST is set ([#49](https://github.com/PhyberApex/tegata/issues/49))
+* **backend:** GET /api/status was unauthenticated and always on. It now returns 404 unless STATUS_ENDPOINT_TOKEN is set, and then requires Authorization: Bearer <token> (or ?token=), else 401. Set the variable and update your dashboard widget to keep using the endpoint. Response shape is unchanged.
+
+### Features
+
+* add SITE_NAME to brand emails, login page and tab title ([#46](https://github.com/PhyberApex/tegata/issues/46)) ([aaf7bc0](https://github.com/PhyberApex/tegata/commit/aaf7bc0d15e1c0ef3db2041173596427bd7312e9))
+* **auth:** support IPv6 CIDRs in NATIVE_LOGIN_CIDRS ([#45](https://github.com/PhyberApex/tegata/issues/45)) ([a12da9c](https://github.com/PhyberApex/tegata/commit/a12da9c99ace050df82f229c68c8f0ce3cbafee9))
+* **backend:** gate /api/status behind STATUS_ENDPOINT_TOKEN ([#47](https://github.com/PhyberApex/tegata/issues/47)) ([e5b4661](https://github.com/PhyberApex/tegata/commit/e5b466169adcabd34d9937cf1241dea7b96ca8a9))
+* **backend:** make argon2id parameters configurable ([#52](https://github.com/PhyberApex/tegata/issues/52)) ([8de5e18](https://github.com/PhyberApex/tegata/commit/8de5e18a5f57a5cff22ba3f9797550ec1cacacbe))
+* **backend:** make listen port and bind address configurable (PORT, HOST) ([#42](https://github.com/PhyberApex/tegata/issues/42)) ([1d707d2](https://github.com/PhyberApex/tegata/commit/1d707d2478ff806e9110548130fbcfaaf591d503))
+* **backend:** make proxy trust configurable via TRUST_PROXY ([#44](https://github.com/PhyberApex/tegata/issues/44)) ([f0aa950](https://github.com/PhyberApex/tegata/commit/f0aa950a010509a092c3d15a599ff6e775e31888))
+* **backend:** require or derive PUBLIC_URL when SMTP_HOST is set ([#49](https://github.com/PhyberApex/tegata/issues/49)) ([f57cfb3](https://github.com/PhyberApex/tegata/commit/f57cfb3f89768aa6e13e97f75fc290e2b2d2d317))
+* validate usernames with a documented, overridable pattern ([#50](https://github.com/PhyberApex/tegata/issues/50)) ([cad5d31](https://github.com/PhyberApex/tegata/commit/cad5d31342d5f8c387aea4f20b4e297fb0da3b6b))
+
+
+### Bug Fixes
+
+* **auth:** use client_secret_post for the OIDC token endpoint ([#41](https://github.com/PhyberApex/tegata/issues/41)) ([d2d7d11](https://github.com/PhyberApex/tegata/commit/d2d7d11c8f19974c2746fc033bb54173f2609d90))
+* **backend:** build OIDC callback URL from OIDC_REDIRECT_URI, not the Host header ([#58](https://github.com/PhyberApex/tegata/issues/58)) ([5b99551](https://github.com/PhyberApex/tegata/commit/5b995513f0f1840705eec698fccaca7b80c126c0)), closes [#31](https://github.com/PhyberApex/tegata/issues/31)
+* **backend:** create the users file 0600 instead of umask permissions ([#66](https://github.com/PhyberApex/tegata/issues/66)) ([d203b4b](https://github.com/PhyberApex/tegata/commit/d203b4b03369e4f1544f7d639c5bad6e1cdeb5f4))
+* **backend:** don't cache a failed OIDC discovery ([#56](https://github.com/PhyberApex/tegata/issues/56)) ([a45862d](https://github.com/PhyberApex/tegata/commit/a45862df0e396ca89fc6f0ff3d37bd4dd449c53a))
+* **backend:** don't flag a fresh install as an out-of-band edit ([#59](https://github.com/PhyberApex/tegata/issues/59)) ([7e68d9c](https://github.com/PhyberApex/tegata/commit/7e68d9c6fccb298cbb5796f0830d64c0f4129f58))
+* **backend:** label HTTP metrics with the templated route, not the raw path ([#57](https://github.com/PhyberApex/tegata/issues/57)) ([198ee79](https://github.com/PhyberApex/tegata/commit/198ee79cceaed558cb6916108dd8bbccb6e3b6fa))
+* **backend:** look up users by own key, not Object.prototype members ([#61](https://github.com/PhyberApex/tegata/issues/61)) ([0d51167](https://github.com/PhyberApex/tegata/commit/0d51167f705a8a63b73d0d8300e7a450f69c007e))
+* **backend:** model allow rules with an OR-list of groups in Access Preview ([#69](https://github.com/PhyberApex/tegata/issues/69)) ([1d9fb07](https://github.com/PhyberApex/tegata/commit/1d9fb070c631f0c02e842e8f86a32c0cf7bc0aee))
+* **backend:** reject blank names, displaynames and group entries ([#62](https://github.com/PhyberApex/tegata/issues/62)) ([01a5510](https://github.com/PhyberApex/tegata/commit/01a5510ea4af3de86c6d5d2befd72c41130bf419))
+* **backend:** return 404 for unknown /api GETs instead of the SPA index ([#64](https://github.com/PhyberApex/tegata/issues/64)) ([bb7025a](https://github.com/PhyberApex/tegata/commit/bb7025a24e202afbd523486353f01d6b57d0d3dc))
+* **deps:** update dependency argon2 to v0.45.2 ([#70](https://github.com/PhyberApex/tegata/issues/70)) ([7acb11c](https://github.com/PhyberApex/tegata/commit/7acb11c26ea0928e84910be0181645f1a9332def))
+* **deps:** update dependency openid-client to v6.8.9 ([#8](https://github.com/PhyberApex/tegata/issues/8)) ([4d22f8f](https://github.com/PhyberApex/tegata/commit/4d22f8fbae6b3f448eab81676afaf9946cd54f1a))
+* **deps:** update node.js to 8996bb5 ([#60](https://github.com/PhyberApex/tegata/issues/60)) ([86a71fa](https://github.com/PhyberApex/tegata/commit/86a71fafaf28ba1a8d86a800a92a7a4d20313139))
+* **deps:** update node.js to v26 ([#9](https://github.com/PhyberApex/tegata/issues/9)) ([dbb4c2f](https://github.com/PhyberApex/tegata/commit/dbb4c2f24db61417bc97250a42de876b22945ea0))
+* **deps:** update pnpm to v12.17.0 ([#71](https://github.com/PhyberApex/tegata/issues/71)) ([d16bebb](https://github.com/PhyberApex/tegata/commit/d16bebb98cfee35dbc0a1a0936eb25607fb75dfe))
+* **deps:** update vitest monorepo to v5.1.0 ([#43](https://github.com/PhyberApex/tegata/issues/43)) ([76ebfc8](https://github.com/PhyberApex/tegata/commit/76ebfc8b0bc133d64032d71a43fca25747fdec74))
+* **frontend:** clear the shared modal error when opening the Delete User dialog ([#67](https://github.com/PhyberApex/tegata/issues/67)) ([696c1c6](https://github.com/PhyberApex/tegata/commit/696c1c6189192c22c8e3a4efb9ab76845cde9863))
+* **frontend:** end the session and go to /login on an expired-session 401 ([#65](https://github.com/PhyberApex/tegata/issues/65)) ([c4b6e7f](https://github.com/PhyberApex/tegata/commit/c4b6e7fe0fcd8cc6975b31337fe8cda895a752f8))
+
 ## [1.0.1](https://github.com/PhyberApex/tegata/compare/v1.0.0...v1.0.1) (2026-11-05)
 
 
