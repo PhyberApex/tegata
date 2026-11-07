@@ -232,7 +232,7 @@ open — it is open on purpose.
 | `GUARDED_GROUPS` | no | — | comma-separated groups the Enabled-Count Guard also refuses to empty, e.g. `admins` |
 | `ACCESS_PREVIEW_OPEN_POLICIES` | no | — | comma-separated OIDC authorization policies left open on purpose |
 | `PORT` | no | `3000` | TCP port the backend listens on; a non-numeric or out-of-range value refuses to boot |
-| `HOST` | no | `0.0.0.0` | address the backend binds to |
+| `HOST` | no | `0.0.0.0` | address the backend binds to. The image's healthcheck probes `127.0.0.1`, which matches the default; if you set `HOST` to an IPv6-only address (e.g. `::1`) the healthcheck will fail and the container turns `unhealthy`, so override the healthcheck too |
 | `NATIVE_LOGIN_CIDRS` | no | `10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8` | IPv4 or IPv6 CIDRs (e.g. `fd00::/8`) the password login answers from; `::1` is always admitted; a malformed entry refuses to boot |
 | `PUBLIC_URL` | when `SMTP_HOST` is set, otherwise derived/unused | derived from the origin of `OIDC_REDIRECT_URI` | what the links in outgoing emails start with; must be an absolute `http(s)` URL. Boot fails if `SMTP_HOST` is set and neither this nor `OIDC_REDIRECT_URI` is |
 | `SMTP_HOST` | for email | — | unset disables email delivery entirely |

@@ -46,6 +46,6 @@ WORKDIR /app
 COPY --from=backend-build /deploy backend
 COPY --from=frontend-build /app/frontend/dist frontend/dist
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:${PORT:-3000}/api/health || exit 1
+  CMD wget -qO- http://127.0.0.1:${PORT:-3000}/api/health || exit 1
 EXPOSE 3000
 CMD ["node", "backend/dist/main.js"]
