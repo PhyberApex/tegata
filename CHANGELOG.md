@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.1](https://github.com/PhyberApex/tegata/compare/v2.0.0...v2.0.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @swc/core to v1.16.22 ([#77](https://github.com/PhyberApex/tegata/issues/77)) ([a84c0b5](https://github.com/PhyberApex/tegata/commit/a84c0b579861d1b12beceec89168f5866495d3d5))
+* **deps:** update dependency vite to v8.3.6 ([#78](https://github.com/PhyberApex/tegata/issues/78)) ([f83a72d](https://github.com/PhyberApex/tegata/commit/f83a72df0e7f5a23fe183d433d7f96d7835a68f4))
+* **deps:** update dependency vue to v3.5.45 ([#79](https://github.com/PhyberApex/tegata/issues/79)) ([71356e5](https://github.com/PhyberApex/tegata/commit/71356e5268c7623131c74e1aa4283789746694d4))
+* **deps:** update nest monorepo ([#72](https://github.com/PhyberApex/tegata/issues/72)) ([d96c8bd](https://github.com/PhyberApex/tegata/commit/d96c8bd9474c9a1f68b0bbdd343077e5a4b99cb9))
+* **deps:** update nest monorepo ([#80](https://github.com/PhyberApex/tegata/issues/80)) ([dc254e0](https://github.com/PhyberApex/tegata/commit/dc254e05514d82461dad7c50e43a2939e1ae5ff1))
+* **deps:** update pnpm to v12.18.0 ([#76](https://github.com/PhyberApex/tegata/issues/76)) ([7913f05](https://github.com/PhyberApex/tegata/commit/7913f05da707ff54ede95b02c4d3abede001761d))
+* **docker:** probe 127.0.0.1 in HEALTHCHECK to match default HOST ([#75](https://github.com/PhyberApex/tegata/issues/75)) ([53a79f2](https://github.com/PhyberApex/tegata/commit/53a79f2aaa52fad5f41d2c8e1aa6543c653941da))
+
 ## [2.0.0](https://github.com/PhyberApex/tegata/compare/v1.0.1...v2.0.0) (2026-11-07)
 
 
