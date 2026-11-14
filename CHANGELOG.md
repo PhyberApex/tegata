@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.2](https://github.com/PhyberApex/tegata/compare/v2.0.1...v2.0.2) (2026-11-14)
+
+
+### Bug Fixes
+
+* **deps:** update dependency nodemailer to v10.4.0 ([#82](https://github.com/PhyberApex/tegata/issues/82)) ([886285e](https://github.com/PhyberApex/tegata/commit/886285efe945fb3a1bb7ec3bac524a188bae7582))
+* **deps:** update dependency nodemailer to v10.5.0 ([#87](https://github.com/PhyberApex/tegata/issues/87)) ([e7ffdf8](https://github.com/PhyberApex/tegata/commit/e7ffdf8d0983f924288876e58088288bcd16a539))
+* **deps:** update dependency vite to v8.3.7 ([#85](https://github.com/PhyberApex/tegata/issues/85)) ([105bfab](https://github.com/PhyberApex/tegata/commit/105bfabae9e703ae6aa48db9ced83226b1aad210))
+* **deps:** update dependency vite to v8.3.8 ([#89](https://github.com/PhyberApex/tegata/issues/89)) ([02569b7](https://github.com/PhyberApex/tegata/commit/02569b7775acf2c0e88a185c9d51574d7d0659a4))
+* **deps:** update dependency vue-router to v5.5.0 ([#88](https://github.com/PhyberApex/tegata/issues/88)) ([1092973](https://github.com/PhyberApex/tegata/commit/10929738cd36fc20091bbe820b810e2b88c1e6d7))
+* **deps:** update nest monorepo to v12.4.2 ([#86](https://github.com/PhyberApex/tegata/issues/86)) ([212b3b8](https://github.com/PhyberApex/tegata/commit/212b3b80a06887a0736857c69ee33bbbf249cd02))
+* **deps:** update node.js to 6bd9ab4 ([#84](https://github.com/PhyberApex/tegata/issues/84)) ([b8ce3d9](https://github.com/PhyberApex/tegata/commit/b8ce3d97a9a10864aafa00120c87af3e1f2a74f2))
+
 ## [2.0.1](https://github.com/PhyberApex/tegata/compare/v2.0.0...v2.0.1) (2026-11-10)
 
 
