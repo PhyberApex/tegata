@@ -482,3 +482,44 @@ describe('groupsView delete', () => {
     expect(findDialog('Delete Group').querySelector('[role="alert"]')?.textContent).toContain('media')
   })
 })
+
+describe('groupsView page-level error banner', () => {
+  it('clears a failed reload\'s banner and shows the empty state once a later reload returns no groups', async () => {
+    const groupLists: Array<unknown[] | Response> = [
+      [
+        { name: 'media', description: '' },
+        { name: 'books', description: '' },
+      ],
+      jsonResponse({ message: 'Too many requests' }, 429),
+      [],
+    ]
+    fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === 'DELETE')
+        return Promise.resolve(new Response(null, { status: 204 }))
+      if (url === '/api/groups') {
+        const answer = groupLists.shift()!
+        return Promise.resolve(answer instanceof Response
+          ? answer
+          : jsonResponse(answer))
+      }
+      if (url === '/api/users')
+        return Promise.resolve(jsonResponse([]))
+      return Promise.resolve(jsonResponse({ available: false, reason: 'n/a' }))
+    })
+    const wrapper = await mountView()
+
+    async function deleteFirstGroup() {
+      await wrapper.findAll('button').find(b => b.text() === 'Delete')!.trigger('click')
+      await flushPromises()
+      await new DOMWrapper(document.querySelector('[role="dialog"] .tg-btn-danger')!).trigger('click')
+      await flushPromises()
+    }
+
+    await deleteFirstGroup()
+    expect(wrapper.find('.tg-error[role="alert"]').text()).toBe('Too many requests')
+
+    await deleteFirstGroup()
+    expect(wrapper.find('.tg-error[role="alert"]').exists()).toBe(false)
+    expect(wrapper.find('.tg-empty').text()).toContain('No groups yet')
+  })
+})

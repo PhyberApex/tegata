@@ -96,6 +96,7 @@ function memberCount(name: string): number {
 }
 
 async function loadData() {
+  error.value = ''
   const accessPreviewPromise = api.get<AccessPreviewResponse>('/api/access-preview').catch(() => null)
 
   try {

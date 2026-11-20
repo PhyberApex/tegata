@@ -67,6 +67,7 @@ const outstandingTokenExpired = computed(() =>
 const editEffectiveAccess = computed(() => computeEffectiveAccess(normalizedAccessPreview.value, editForm.value.groups))
 
 async function loadData() {
+  error.value = ''
   const accessPreviewPromise = api.get<AccessPreviewResponse>('/api/access-preview').catch(() => null)
 
   try {
