@@ -1,24 +1,30 @@
-import { readFileSync } from 'node:fs'
-import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
-import * as yaml from 'js-yaml'
+import type { UnreadableKind } from '../users/users.service'
+import { Controller, Get, HttpException, HttpStatus, Logger } from '@nestjs/common'
 import { DatabaseService } from '../database/database.service'
+import { UsersService } from '../users/users.service'
 
 type UsersDatabaseHealth = { healthy: true } | { healthy: false, reason: string }
 
+/**
+ * Fixed, content-free reasons for the unauthenticated health body. The underlying detail can carry the
+ * file path or — for a YAML parse error — a snippet of the file's own lines (usernames, emails, hashes),
+ * so it is only ever logged, never returned.
+ */
+const UNREADABLE_REASONS: Record<UnreadableKind, string> = {
+  'read-error': 'Authelia users database could not be read',
+  'missing': 'Authelia users database is missing',
+  'invalid-yaml': 'Authelia users database is not valid YAML',
+  'no-users-mapping': 'Authelia users database has no users mapping',
+}
+
 @Controller('health')
 export class HealthController {
-  private readonly usersFilePath: string
+  private readonly logger = new Logger(HealthController.name)
 
   constructor(
     private readonly dbService: DatabaseService,
-    config: ConfigService,
-  ) {
-    this.usersFilePath = config.get<string>(
-      'AUTHELIA_USERS_FILE',
-      '/authelia-config/users_database.yml',
-    )
-  }
+    private readonly usersService: UsersService,
+  ) {}
 
   @Get()
   check() {
@@ -46,37 +52,26 @@ export class HealthController {
   }
 
   /**
-   * Reads and parses the users database independently of UsersService.readDatabase() — that method
-   * runs Out-of-Band Edit detection (a DB write) and swallows both a missing file and a parse failure
-   * into the same empty fallback, which loses the signal this check needs. A missing file is healthy
-   * (UsersService tolerates a not-yet-created database, and CI boots against a fresh temp dir without
-   * one); a file that exists but can't be read (e.g. permission denied) or fails to YAML-parse is
-   * unhealthy — both are "unparsable" from the admin's point of view.
+   * Healthy exactly when UsersService would accept a write: delegates to `UsersService.getReadability()`,
+   * the Unreadable Users Database rule (CONTEXT.md) without Out-of-Band Edit bookkeeping. A missing file
+   * with no Baseline Hash recorded is healthy (fresh install, and the CI boot check); a read error, a
+   * parse failure, a file without a `users` mapping (zero bytes included), or a missing file after a
+   * Baseline Hash was recorded is unhealthy. The detail is logged at warn level and the caller gets only
+   * a fixed reason per category. If the check itself throws (the baseline lookup needs SQLite, which may
+   * be closed), the database counts as unhealthy rather than the probe failing with a 500.
    */
   private checkUsersDatabase(): UsersDatabaseHealth {
-    let content: string
     try {
-      content = readFileSync(this.usersFilePath, 'utf-8')
-    }
-    catch (err) {
-      if (err instanceof Error && 'code' in err && err.code === 'ENOENT')
+      const readability = this.usersService.getReadability()
+      if (readability.readable)
         return { healthy: true }
 
-      const message = err instanceof Error
-        ? err.message
-        : String(err)
-      return { healthy: false, reason: `Authelia users database could not be read: ${message}` }
-    }
-
-    try {
-      yaml.loadAll(content)
-      return { healthy: true }
+      this.logger.warn(`Health check: users database is unreadable: ${readability.reason}`)
+      return { healthy: false, reason: UNREADABLE_REASONS[readability.kind] }
     }
     catch (err) {
-      const message = err instanceof Error
-        ? err.message
-        : String(err)
-      return { healthy: false, reason: `Authelia users database is not valid YAML: ${message}` }
+      this.logger.warn(`Health check: users database readability could not be checked: ${err}`)
+      return { healthy: false, reason: 'Authelia users database could not be checked' }
     }
   }
 }
