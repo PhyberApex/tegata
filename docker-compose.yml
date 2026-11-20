@@ -5,7 +5,7 @@
 # "Authelia configuration". Proxy examples: examples/.
 services:
   tegata:
-    image: ghcr.io/phyberapex/tegata:2.0.2 # x-release-please-version
+    image: ghcr.io/phyberapex/tegata:2.1.0 # x-release-please-version
     container_name: tegata
     env_file: .env
     environment:
