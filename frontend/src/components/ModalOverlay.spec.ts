@@ -107,6 +107,55 @@ describe('modalOverlay', () => {
     expect(event.defaultPrevented).toBe(false)
   })
 
+  // A Confirm button that turns disabled while its request is in flight is
+  // blurred by the browser, leaving focus on <body> behind the dialog.
+  it('still handles Escape and Tab after focus has fallen back to the body', async () => {
+    const wrapper = mountModal()
+    await nextTick()
+    ;(document.activeElement as HTMLElement).blur()
+    expect(document.activeElement).toBe(document.body)
+
+    keydown(document.body, 'Tab')
+    expect(document.activeElement).toBe(focusables()[0])
+
+    ;(document.activeElement as HTMLElement).blur()
+    keydown(document.body, 'Escape')
+    expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('lets only the top-most of two stacked dialogs react to Escape', async () => {
+    const below = mountModal()
+    const above = mount(ModalOverlay, {
+      props: { title: 'Confirm Access Change' },
+      attachTo: document.body,
+    })
+    await nextTick()
+    keydown(document.activeElement as HTMLElement, 'Escape')
+    expect(above.emitted('close')).toHaveLength(1)
+    expect(below.emitted('close')).toBeUndefined()
+  })
+
+  it('skips controls removed from the tab order when wrapping', async () => {
+    mount(ModalOverlay, {
+      props: { title: 'Delete User' },
+      slots: {
+        default: () => [
+          h('button', { id: 'slot-confirm' }, 'Confirm'),
+          h('button', {
+            id: 'slot-skipped',
+            tabindex: -1,
+          }, 'Skipped'),
+        ],
+      },
+      attachTo: document.body,
+    })
+    await nextTick()
+    const confirm = document.getElementById('slot-confirm')!
+    confirm.focus()
+    keydown(confirm, 'Tab')
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Close')
+  })
+
   it('returns focus to the opener after unmount', async () => {
     const open = ref(false)
     const Host = defineComponent(() => () => h('div', [

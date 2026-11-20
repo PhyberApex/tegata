@@ -7,27 +7,37 @@ const emit = defineEmits<{ close: [] }>()
 const titleId = useId()
 const dialogEl = ref<HTMLElement>()
 
-// Elements a keyboard user can Tab to; disabled and tabindex="-1" ones are skipped.
-const FOCUSABLE = [
+// Every selector excludes tabindex="-1": those controls are out of the Tab order.
+const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
   'input:not([disabled]):not([type="hidden"])',
   'select:not([disabled])',
   'textarea:not([disabled])',
-  '[tabindex]:not([tabindex="-1"])',
-].join(', ')
+  '[tabindex]',
+].map(selector => `${selector}:not([tabindex="-1"])`).join(', ')
 
 function focusables(): HTMLElement[] {
   return dialogEl.value
     ? [
-        ...dialogEl.value.querySelectorAll<HTMLElement>(FOCUSABLE),
+        ...dialogEl.value.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
       ]
     : []
+}
+
+// Stacked dialogs are sibling teleports, so the last one in <body> is on top.
+function isTopMost(): boolean {
+  const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]')
+  return dialogs.length > 0 && dialogs[dialogs.length - 1] === dialogEl.value
 }
 
 let opener: HTMLElement | null = null
 
 onMounted(() => {
+  // Listening on the document, not the dialog, keeps Escape and the trap working
+  // when focus has fallen back to <body>, e.g. from a Confirm button the browser
+  // blurred because it turned disabled while its request is in flight.
+  document.addEventListener('keydown', onKeydown)
   opener = document.activeElement instanceof HTMLElement
     ? document.activeElement
     : null
@@ -39,11 +49,14 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeydown)
   if (opener?.isConnected)
     opener.focus()
 })
 
 function onKeydown(event: KeyboardEvent) {
+  if (!isTopMost())
+    return
   if (event.key === 'Escape') {
     event.preventDefault()
     emit('close')
@@ -81,7 +94,6 @@ function onKeydown(event: KeyboardEvent) {
         aria-modal="true"
         :aria-labelledby="titleId"
         tabindex="-1"
-        @keydown="onKeydown"
       >
         <div class="modal-header">
           <h2 :id="titleId" class="modal-title">
@@ -113,10 +125,14 @@ function onKeydown(event: KeyboardEvent) {
 
 .modal {
   width: 100%;
-  outline: none;
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
+}
+
+/* Only reachable by script or a click on the card; the ring would just frame the card. */
+.modal:focus {
+  outline: none;
 }
 
 .modal-header {
