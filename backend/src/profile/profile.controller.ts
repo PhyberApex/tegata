@@ -2,11 +2,12 @@ import { Body, Controller, Patch, Post, Req, UnauthorizedException, UseGuards } 
 import { Throttle } from '@nestjs/throttler'
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
 import { ProfileGuard, ProfileRequest } from '../auth/profile.guard'
+import { IsTrimmedNonEmpty } from '../common/name-validation'
 import { UsersService } from '../users/users.service'
 
 class UpdateProfileDto {
   @IsOptional()
-  @IsString()
+  @IsTrimmedNonEmpty()
   displayname?: string
 
   @IsOptional()
