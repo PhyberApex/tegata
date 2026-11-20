@@ -9,6 +9,7 @@ import { DynamicLogger, installFetchLogger, setDynamicLoggerInstance } from './c
 import { assertArgon2Options } from './config/argon2-options'
 import { parseTrustProxy } from './config/parse-trust-proxy'
 import { assertSecrets } from './config/secrets'
+import { warnIfInsecureCookies } from './config/secure-cookies'
 import { assertUsernamePattern } from './config/username-pattern'
 import { parseListenPort } from './listen-port'
 
@@ -20,6 +21,8 @@ async function bootstrap() {
 
   const logger = new DynamicLogger('log')
   setDynamicLoggerInstance(logger)
+  // process.env, not ConfigService: the cookie flag is fixed from it when the auth controller loads
+  warnIfInsecureCookies(process.env.NODE_ENV, message => logger.warn(message, 'Bootstrap'))
   installFetchLogger({
     verbosePatterns: ['/metrics', '/health'],
   })

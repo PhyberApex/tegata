@@ -45,6 +45,8 @@ WORKDIR /app
 # so the deployed tree keeps the workspace layout.
 COPY --from=backend-build /deploy backend
 COPY --from=frontend-build /app/frontend/dist frontend/dist
+# Safe by default: production is what gives cookies the Secure flag (README.md, "Environment variables").
+ENV NODE_ENV=production
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- http://127.0.0.1:${PORT:-3000}/api/health || exit 1
 EXPOSE 3000

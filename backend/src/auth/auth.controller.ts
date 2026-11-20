@@ -4,6 +4,7 @@ import { Body, Controller, Get, Logger, Post, Req, Res, UnauthorizedException } 
 import { ConfigService } from '@nestjs/config'
 import { Throttle } from '@nestjs/throttler'
 import { IsString } from 'class-validator'
+import { cookiesAreSecure } from '../config/secure-cookies'
 import { usernamePatternSource } from '../config/username-pattern'
 import { AdminAccountCheck } from './admin-account-check'
 import { AuthService } from './auth.service'
@@ -17,7 +18,7 @@ class LoginDto {
 
 const COOKIE_BASE = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure: cookiesAreSecure(process.env.NODE_ENV),
 } as const
 
 @Controller('auth')
