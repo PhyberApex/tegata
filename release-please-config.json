@@ -3,6 +3,12 @@
   "release-type": "simple",
   "pull-request-header": ":partying_face: Preparing a new release",
   "packages": {
-    ".": {}
+    ".": {
+      "extra-files": [
+        { "type": "generic", "path": "README.md" },
+        { "type": "generic", "path": "docker-compose.yml" },
+        { "type": "generic", "path": "examples/docker-compose.traefik.yml" }
+      ]
+    }
   }
 }
