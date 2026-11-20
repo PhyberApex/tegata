@@ -2,6 +2,8 @@
 
 > *Tegata* — handprint, a personal mark. User, group and invite management for
 > [Authelia](https://www.authelia.com/)'s file user backend.
+>
+> **[phyberapex.github.io/tegata](https://phyberapex.github.io/tegata/)**
 
 Authelia's file backend is a YAML file you edit by hand, with argon2 hashes you generate on
 the command line. Tegata is the admin UI for it: it writes `users_database.yml` for you,
@@ -303,6 +305,7 @@ backend/   NestJS API, serves the built frontend; owns the users file and the SQ
 frontend/  Vue 3 + Vite admin UI, plus the public invite and reset pages
 shared/    @tegata/shared — the wire types both sides import
 docs/adr/  decision records
+site/      the landing page: plain HTML, CSS and JS, deployed to GitHub Pages as it stands
 ```
 
 `backend/CONTEXT.md` and `frontend/CONTEXT.md` define the vocabulary the code uses: Authelia
