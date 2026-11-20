@@ -1,4 +1,7 @@
 import type { TestingModule } from '@nestjs/testing'
+import { randomUUID } from 'node:crypto'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { NotFoundException, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Test } from '@nestjs/testing'
@@ -75,8 +78,9 @@ describe('statusController', () => {
   })
 
   describe('serialized body', () => {
-    it('sends ageHours as null, not a non-JSON number, when the users file cannot be read', async () => {
+    it('sends ageHours as null when the Authelia Users Database cannot be read', async () => {
       process.env.STATUS_ENDPOINT_TOKEN = 's3cret'
+      const missingUsersDatabase = join(tmpdir(), `tegata-missing-${randomUUID()}`, 'users_database.yml')
       const module: TestingModule = await Test.createTestingModule({
         controllers: [StatusController],
         providers: [
@@ -84,7 +88,9 @@ describe('statusController', () => {
           {
             provide: ConfigService,
             useValue: {
-              get: () => '/nonexistent/tegata/users_database.yml',
+              get: (key: string, def: unknown) => key === 'AUTHELIA_USERS_FILE'
+                ? missingUsersDatabase
+                : def,
             },
           },
           {
@@ -105,6 +111,8 @@ describe('statusController', () => {
 
       const result = await realController.get('Bearer s3cret')
 
+      // Infinity would also serialize to null, so the in-process value is checked too.
+      expect(result.authelia.ageHours).toBeNull()
       expect(JSON.parse(JSON.stringify(result))).toEqual({
         totalUsers: 0,
         pendingInvites: 0,
