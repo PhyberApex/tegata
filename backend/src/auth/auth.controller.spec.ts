@@ -1,4 +1,5 @@
 import type { Mocked } from 'vitest'
+import type { AccountLookup, PublicUser } from '../users/users.service'
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Test, TestingModule } from '@nestjs/testing'
@@ -23,6 +24,21 @@ vi.mock('openid-client', () => ({
   authorizationCodeGrant: vi.fn(),
 }))
 
+/** A readable lookup of alice, an Enabled member of the default required group unless overridden. */
+function aliceLookup(overrides: Partial<PublicUser> = {}): AccountLookup {
+  return {
+    readable: true,
+    user: {
+      username: 'alice',
+      displayname: 'Alice',
+      email: '',
+      groups: ['tegata'],
+      disabled: false,
+      ...overrides,
+    },
+  }
+}
+
 describe('authController', () => {
   let controller: AuthController
   let mockAuthService: Mocked<Pick<AuthService, 'login' | 'verifyToken' | 'loginWithOidc'>>
@@ -43,16 +59,7 @@ describe('authController', () => {
     }
 
     mockUsersService = {
-      lookupAccount: vi.fn().mockReturnValue({
-        readable: true,
-        user: {
-          username: 'alice',
-          displayname: 'Alice',
-          email: '',
-          groups: ['tegata'],
-          disabled: false,
-        },
-      }),
+      lookupAccount: vi.fn().mockReturnValue(aliceLookup()),
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -183,16 +190,7 @@ describe('authController', () => {
       })
 
       it('should return 401 once the user has been Disabled', () => {
-        mockUsersService.lookupAccount.mockReturnValue({
-          readable: true,
-          user: {
-            username: 'alice',
-            displayname: 'Alice',
-            email: '',
-            groups: ['tegata'],
-            disabled: true,
-          },
-        })
+        mockUsersService.lookupAccount.mockReturnValue(aliceLookup({ disabled: true }))
 
         expect(() => controller.check(mockReq)).toThrow(UnauthorizedException)
       })
@@ -204,16 +202,9 @@ describe('authController', () => {
       })
 
       it('should return 401 once the user is no longer in the required group', () => {
-        mockUsersService.lookupAccount.mockReturnValue({
-          readable: true,
-          user: {
-            username: 'alice',
-            displayname: 'Alice',
-            email: '',
-            groups: ['users'],
-            disabled: false,
-          },
-        })
+        mockUsersService.lookupAccount.mockReturnValue(aliceLookup({
+          groups: ['users'],
+        }))
 
         expect(() => controller.check(mockReq)).toThrow(UnauthorizedException)
       })

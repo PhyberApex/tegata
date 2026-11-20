@@ -13,6 +13,6 @@ Amends the consequences of [ADR-0003](0003-self-service-profile-reuses-oidc-not-
 ## Consequences
 
 - A token without `sub` is a Native Login session — the break-glass path, with no user behind it — and is admitted exactly as before.
-- An Unreadable Users Database admits the session without re-checking it (logged at warn level). Refusing would lock every OIDC admin out of the UI in exactly the state they need it to see the banner and repair, which is worse than the gap; it uses a tolerant read (`UsersService.lookupAccount`), not the 503-throwing one.
+- An Unreadable Users Database admits the session without re-checking it (logged at warn level). Refusing would shut every OIDC admin out of the UI in exactly the state they need it to see the banner and repair, which is worse than the gap. The read (`UsersService.lookupAccount`) reports the Unreadable state instead of throwing the 503 the write paths use, and instead of reading the database as empty, which would refuse every admin as deleted.
 - `AdminAccountCheck` is provided by a small `@Global()` `AdminAccountCheckModule` that imports `UsersModule`, because `UsersModule` already imports `AuthModule` and `AuthGuard` is instantiated in every module whose controllers use it.
 - Group membership is now decided twice for an OIDC admin: at callback time (which Session Role the token gets) and on every request (whether an `admin` token still counts). A user *added* to `OIDC_REQUIRED_GROUP` still has to log in again to get an `admin` session.

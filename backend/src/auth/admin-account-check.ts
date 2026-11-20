@@ -1,15 +1,15 @@
 import type { AuthTokenPayload } from './auth.service'
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { DEFAULT_OIDC_REQUIRED_GROUP } from '../users/guarded-groups'
+import { getRequiredGroup } from '../users/guarded-groups'
 import { UsersService } from '../users/users.service'
 
 /**
  * Re-reads the user an OIDC `admin` session names on every request, so Disabling, deleting or removing
  * an admin from `OIDC_REQUIRED_GROUP` ends their admin session at once rather than when the token
  * expires (ADR-0006). A token without `sub` is a Native Login session — the break-glass path, with no
- * user to check — and is admitted as before. An Unreadable Users Database admits the session too:
- * locking every OIDC admin out in exactly the state they need the UI to repair is worse than the gap.
+ * user to check — and is always admitted. An Unreadable Users Database admits the session too: shutting
+ * every OIDC admin out of the UI in exactly the state they need it to repair is worse than the gap.
  *
  * Provided by the global `AdminAccountCheckModule`, not `AuthModule`, because `UsersModule` already
  * imports `AuthModule`; being global, it resolves in every module that hosts `AuthGuard`.
@@ -31,7 +31,7 @@ export class AdminAccountCheck {
       return
     }
 
-    const requiredGroup = this.config.get<string>('OIDC_REQUIRED_GROUP', DEFAULT_OIDC_REQUIRED_GROUP)
+    const requiredGroup = getRequiredGroup(this.config)
     const { user } = lookup
     if (!user || user.disabled || !user.groups.includes(requiredGroup)) {
       this.logger.warn(`${label}: ${payload.sub} is disabled, no longer exists, or is no longer in ${requiredGroup}`)

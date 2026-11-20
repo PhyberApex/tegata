@@ -1,4 +1,5 @@
 import type { Mocked } from 'vitest'
+import type { AccountLookup, PublicUser } from '../users/users.service'
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -6,6 +7,21 @@ import { UsersService } from '../users/users.service'
 import { AdminAccountCheck } from './admin-account-check'
 import { AuthGuard } from './auth.guard'
 import { AuthService } from './auth.service'
+
+/** A readable lookup of alice, an Enabled member of the default required group unless overridden. */
+function aliceLookup(overrides: Partial<PublicUser> = {}): AccountLookup {
+  return {
+    readable: true,
+    user: {
+      username: 'alice',
+      displayname: 'Alice',
+      email: '',
+      groups: ['tegata'],
+      disabled: false,
+      ...overrides,
+    },
+  }
+}
 
 describe('authGuard', () => {
   let guard: AuthGuard
@@ -26,16 +42,7 @@ describe('authGuard', () => {
       verifyToken: vi.fn(),
     }
     mockUsersService = {
-      lookupAccount: vi.fn().mockReturnValue({
-        readable: true,
-        user: {
-          username: 'alice',
-          displayname: 'Alice',
-          email: '',
-          groups: ['tegata'],
-          disabled: false,
-        },
-      }),
+      lookupAccount: vi.fn().mockReturnValue(aliceLookup()),
     }
     guard = buildGuard()
   })
@@ -103,16 +110,7 @@ describe('authGuard', () => {
     })
 
     it('should refuse an admin who has since been Disabled', () => {
-      mockUsersService.lookupAccount.mockReturnValue({
-        readable: true,
-        user: {
-          username: 'alice',
-          displayname: 'Alice',
-          email: '',
-          groups: ['tegata'],
-          disabled: true,
-        },
-      })
+      mockUsersService.lookupAccount.mockReturnValue(aliceLookup({ disabled: true }))
 
       expect(() => guard.canActivate(createContext({ tegata_token: 'oidc' }))).toThrow(UnauthorizedException)
     })
@@ -124,16 +122,9 @@ describe('authGuard', () => {
     })
 
     it('should refuse an admin who is no longer in the required group', () => {
-      mockUsersService.lookupAccount.mockReturnValue({
-        readable: true,
-        user: {
-          username: 'alice',
-          displayname: 'Alice',
-          email: '',
-          groups: ['users'],
-          disabled: false,
-        },
-      })
+      mockUsersService.lookupAccount.mockReturnValue(aliceLookup({
+        groups: ['users'],
+      }))
 
       expect(() => guard.canActivate(createContext({ tegata_token: 'oidc' }))).toThrow(UnauthorizedException)
     })
@@ -147,16 +138,9 @@ describe('authGuard', () => {
 
       expect(() => guard.canActivate(createContext({ tegata_token: 'oidc' }))).toThrow(UnauthorizedException)
 
-      mockUsersService.lookupAccount.mockReturnValue({
-        readable: true,
-        user: {
-          username: 'alice',
-          displayname: 'Alice',
-          email: '',
-          groups: ['admins'],
-          disabled: false,
-        },
-      })
+      mockUsersService.lookupAccount.mockReturnValue(aliceLookup({
+        groups: ['admins'],
+      }))
       expect(guard.canActivate(createContext({ tegata_token: 'oidc' }))).toBe(true)
     })
 

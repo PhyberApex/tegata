@@ -49,7 +49,7 @@ export type UsersDatabaseReadability = { readable: true } | UnreadableUsersDatab
 
 export interface PublicUser { username: string, displayname: string, email: string, groups: string[], disabled: boolean }
 
-/** A tolerant lookup's answer: the user (or `null` when there is none), or `readable: false` for an Unreadable Users Database. */
+/** One user's lookup: the user (or `null` when there is none), or `readable: false` for an Unreadable Users Database. */
 export type AccountLookup = { readable: true, user: PublicUser | null } | { readable: false }
 
 @Injectable()
@@ -416,9 +416,9 @@ export class UsersService implements OnModuleInit {
   }
 
   /**
-   * Like `getUser`, but tells an Unreadable Users Database apart from a missing user instead of reading
-   * it as empty, and without throwing — so the caller decides what "can't tell" means (`AdminAccountCheck`
-   * admits the session rather than locking every OIDC admin out of the repair).
+   * Like `getUser`, but reports an Unreadable Users Database instead of reading it as empty, and without
+   * throwing like `readDatabaseOrThrow` — so the caller decides what "can't tell" means (`AdminAccountCheck`
+   * admits the session rather than shut every OIDC admin out of the repair).
    */
   lookupAccount(username: string): AccountLookup {
     const result = this.readabilityResult()
