@@ -34,13 +34,14 @@ jobs:
       # Boots the built backend the way the image's CMD does and probes
       # /api/health the way its HEALTHCHECK does: the unit specs construct
       # every class by hand, so this is the one step that exercises the real
-      # dependency graph and a fresh-database start. The password hash is
-      # never verified at boot, only on a login attempt, so a placeholder is
-      # fine; the two paths point at an empty temp dir, which starts empty.
+      # dependency graph and a fresh-database start. Boot refuses a JWT secret
+      # under 32 characters and a password hash argon2 cannot parse, so both
+      # are real: the hash is argon2id of "boot-check". The two paths point at
+      # an empty temp dir, which starts empty.
       - name: Boot check
         env:
-          TEGATA_JWT_SECRET: boot-check-secret
-          TEGATA_ADMIN_PASSWORD_HASH: boot-check-placeholder-hash
+          TEGATA_JWT_SECRET: boot-check-secret-0123456789abcdef
+          TEGATA_ADMIN_PASSWORD_HASH: $argon2id$v=19$m=65536,t=3,p=4$rX53jDF/NlBd4GnCafxfaA$5VX9rDFs+GaHmsHIuJN8xLy1LvdvYUjiQnaYXkQFBFY
           TEGATA_DB_PATH: ${{ runner.temp }}/tegata-boot/tegata.db
           AUTHELIA_USERS_FILE: ${{ runner.temp }}/tegata-boot/users_database.yml
         run: |

@@ -221,8 +221,8 @@ open — it is open on purpose.
 
 | Variable | Required | Default | What it does |
 |---|---|---|---|
-| `TEGATA_ADMIN_PASSWORD_HASH` | yes | — | argon2id hash of the break-glass password |
-| `TEGATA_JWT_SECRET` | yes | — | signs the session cookie; `openssl rand -hex 32` |
+| `TEGATA_ADMIN_PASSWORD_HASH` | yes | — | argon2id hash of the break-glass password; a value that does not start with `$argon2id$`, `$argon2i$` or `$argon2d$`, or that argon2 cannot parse, refuses to boot (in a compose `environment:` list every `$` has to be doubled) |
+| `TEGATA_JWT_SECRET` | yes | — | signs the session cookie; `openssl rand -hex 32`; at least 32 characters, and the `change-me` placeholder or anything shorter refuses to boot |
 | `OIDC_ISSUER` | for SSO | — | Authelia's URL, e.g. `https://auth.example.com` |
 | `OIDC_CLIENT_ID` | for SSO | — | the client id from Authelia's config |
 | `OIDC_CLIENT_SECRET` | for SSO | — | the client secret's plaintext |

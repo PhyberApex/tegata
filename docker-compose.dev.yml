@@ -10,7 +10,7 @@ services:
       - '3100:3000'
     environment:
       - TEGATA_ADMIN_PASSWORD_HASH=${TEGATA_ADMIN_PASSWORD_HASH}
-      - TEGATA_JWT_SECRET=dev-secret-change-me
+      - TEGATA_JWT_SECRET=dev-secret-change-me-0123456789abcdef
       - TEGATA_DB_PATH=/data/tegata.db
       - AUTHELIA_USERS_FILE=/authelia-config/users_database.yml
     volumes:
