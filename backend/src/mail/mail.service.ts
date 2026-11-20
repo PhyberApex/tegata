@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as nodemailer from 'nodemailer'
+import { parseBoolean } from '../config/parse-boolean'
+import { parsePort } from '../listen-port'
 
 export type MailResult = { sentAt: string } | { error: string }
 
@@ -20,27 +22,6 @@ interface ResetEmailInput {
 
 const DEFAULT_SMTP_PORT = 587
 const IMPLICIT_TLS_PORT = 465
-
-function parseSmtpPort(raw: string | undefined): number {
-  const value = raw?.trim()
-  if (!value)
-    return DEFAULT_SMTP_PORT
-  const port = Number(value)
-  if (!/^\d+$/.test(value) || port < 1 || port > 65535)
-    throw new Error(`SMTP_PORT: "${raw}" is not a port number between 1 and 65535`)
-  return port
-}
-
-function parseBooleanSetting(name: string, raw: string | undefined, fallback: boolean): boolean {
-  const value = raw?.trim().toLowerCase()
-  if (!value)
-    return fallback
-  if (value === 'true')
-    return true
-  if (value === 'false')
-    return false
-  throw new Error(`${name}: "${raw}" must be "true" or "false"`)
-}
 
 @Injectable()
 export class MailService {
@@ -71,11 +52,11 @@ export class MailService {
       return
     }
 
-    const port = parseSmtpPort(this.config.get<string>('SMTP_PORT'))
-    const secure = parseBooleanSetting('SMTP_SECURE', this.config.get<string>('SMTP_SECURE'), port === IMPLICIT_TLS_PORT)
+    const port = parsePort('SMTP_PORT', this.config.get<string>('SMTP_PORT'), DEFAULT_SMTP_PORT)
+    const secure = parseBoolean('SMTP_SECURE', this.config.get<string>('SMTP_SECURE'), port === IMPLICIT_TLS_PORT)
     // Without implicit TLS, refuse to send credentials unless STARTTLS succeeds. An unauthenticated
     // relay keeps opportunistic STARTTLS; SMTP_REQUIRE_TLS=false opts out for a trusted local relay.
-    const requireTLS = parseBooleanSetting('SMTP_REQUIRE_TLS', this.config.get<string>('SMTP_REQUIRE_TLS'), Boolean(username))
+    const requireTLS = parseBoolean('SMTP_REQUIRE_TLS', this.config.get<string>('SMTP_REQUIRE_TLS'), Boolean(username))
       && !secure
 
     this.transporter = nodemailer.createTransport({
