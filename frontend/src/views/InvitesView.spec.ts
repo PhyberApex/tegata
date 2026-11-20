@@ -1,3 +1,4 @@
+import type { VueWrapper } from '@vue/test-utils'
 import type { Invite } from '../types'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -44,47 +45,45 @@ function respondWith(options: {
   remove?: Response[]
 }) {
   const invites = [...options.invites]
-  const send = [
-    ...(options.send ?? []),
-  ]
-  const remove = [
-    ...(options.remove ?? []),
-  ]
-  const next = <T>(queue: T[]) => (queue.length > 1
+  const send = options.send ?? []
+  const remove = options.remove ?? []
+  const shiftKeepingLast = <T>(queue: T[]) => (queue.length > 1
     ? queue.shift()!
     : queue[0])
   fetchMock.mockImplementation((url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET'
     if (url === '/api/invites' && method === 'GET') {
-      const answer = next(invites)
+      const answer = shiftKeepingLast(invites)
       return Promise.resolve(answer instanceof Response
         ? answer
         : jsonResponse(answer))
     }
     if (url.endsWith('/send'))
-      return Promise.resolve(next(send))
+      return Promise.resolve(shiftKeepingLast(send))
     if (url.startsWith('/api/invites/') && method === 'DELETE')
-      return Promise.resolve(next(remove))
+      return Promise.resolve(shiftKeepingLast(remove))
     if (url === '/api/groups' || url === '/api/bundles')
       return Promise.resolve(jsonResponse([]))
     return Promise.resolve(jsonResponse({}))
   })
 }
 
-async function mountView() {
+type InvitesWrapper = VueWrapper<InstanceType<typeof InvitesView>>
+
+async function mountView(): Promise<InvitesWrapper> {
   const wrapper = mount(InvitesView, { attachTo: document.body })
   await flushPromises()
   return wrapper
 }
 
-async function clickButton(wrapper: Awaited<ReturnType<typeof mountView>>, label: string) {
+async function clickButton(wrapper: InvitesWrapper, label: string) {
   const button = wrapper.findAll('button').find(b => b.text() === label)
   expect(button, `button "${label}"`).toBeDefined()
   await button!.trigger('click')
   await flushPromises()
 }
 
-function pageBanner(wrapper: Awaited<ReturnType<typeof mountView>>) {
+function pageBanner(wrapper: InvitesWrapper) {
   return wrapper.find('.tg-error[role="alert"]')
 }
 

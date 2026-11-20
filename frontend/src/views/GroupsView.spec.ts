@@ -509,9 +509,9 @@ describe('groupsView page-level error banner', () => {
     const wrapper = await mountView()
 
     async function deleteFirstGroup() {
-      await wrapper.findAll('button').find(b => b.text() === 'Delete')!.trigger('click')
+      await findButton(wrapper.element as HTMLElement, 'Delete').trigger('click')
       await flushPromises()
-      await new DOMWrapper(document.querySelector('[role="dialog"] .tg-btn-danger')!).trigger('click')
+      await findButton(findDialog('Delete Group'), 'Delete').trigger('click')
       await flushPromises()
     }
 
