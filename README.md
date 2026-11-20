@@ -293,7 +293,7 @@ pnpm test
 pnpm typecheck
 pnpm lint
 pnpm build
-pnpm boot-check   # boots backend/dist/main.js and probes /api/health, like CI and the image do
+pnpm boot-check   # boots backend/dist/main.js, probes /api/health like CI and the image do, then checks SIGTERM stops it cleanly
 ```
 
 `pnpm dev` needs the two required variables and a users file to point at; a `.env` in

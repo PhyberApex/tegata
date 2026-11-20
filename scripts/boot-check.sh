@@ -9,9 +9,19 @@
 # ships only that) is on PATH; both return non-zero on a non-2xx answer, which
 # is what makes them interchangeable here.
 #
+# Once healthy it sends SIGTERM, as `docker stop` does, and requires the
+# process to exit by itself within BOOT_STOP_TIMEOUT_S with status 0 or 143
+# (128 + SIGTERM). The image runs Node as PID 1, where the kernel applies no
+# default signal action, so a process that installs no handler would ignore
+# the signal and be SIGKILLed after Docker's grace period. When TEGATA_DB_PATH
+# is set, the SQLite WAL next to it must also be gone or empty afterwards,
+# which shows the database was closed rather than cut off.
+#
 # Usage: scripts/boot-check.sh <start-command> <health-url>
-#   BOOT_TIMEOUT_S   seconds to wait for the health probe to go green (default 30)
-#   BOOT_POLL_S      seconds between probe attempts (default 1)
+#   <start-command> must be a single command: it is exec'd, so SIGTERM reaches it directly
+#   BOOT_TIMEOUT_S       whole seconds to wait for the health probe to go green (default 30)
+#   BOOT_POLL_S          whole seconds between probe attempts (default 1)
+#   BOOT_STOP_TIMEOUT_S  whole seconds to wait for a clean exit after SIGTERM (default 5)
 
 start_cmd=$1
 health_url=$2
@@ -30,17 +40,21 @@ else
   exit 2
 fi
 
+alive() { kill -0 "$pid" 2>/dev/null; }
+
 timeout=${BOOT_TIMEOUT_S:-30}
 poll=${BOOT_POLL_S:-1}
+stop_timeout=${BOOT_STOP_TIMEOUT_S:-5}
 log=$(mktemp)
 
-sh -c "$start_cmd" >"$log" 2>&1 &
+# exec, so $pid is the process itself and SIGTERM reaches it, not a wrapping shell
+sh -c "exec $start_cmd" >"$log" 2>&1 &
 pid=$!
 
 waited=0
 status=1
 while [ "$waited" -lt "$timeout" ]; do
-  if ! kill -0 "$pid" 2>/dev/null; then
+  if ! alive; then
     echo "$start_cmd exited before the health check passed" >&2
     break
   fi
@@ -53,14 +67,39 @@ while [ "$waited" -lt "$timeout" ]; do
 done
 
 if [ "$status" -ne 0 ]; then
-  if kill -0 "$pid" 2>/dev/null; then
+  if alive; then
     echo "$health_url did not become healthy within ${timeout}s" >&2
   fi
+else
+  kill -TERM "$pid" 2>/dev/null
+  # Poll in tenths, so a prompt exit is not rounded up to a whole poll interval
+  ticks=0
+  while alive && [ "$ticks" -lt $((stop_timeout * 10)) ]; do
+    sleep 0.1
+    ticks=$((ticks + 1))
+  done
+  if alive; then
+    echo "$start_cmd did not exit within ${stop_timeout}s of SIGTERM" >&2
+    status=1
+  else
+    wait "$pid"
+    exit_code=$?
+    if [ "$exit_code" -ne 0 ] && [ "$exit_code" -ne 143 ]; then
+      echo "$start_cmd exited with status $exit_code after SIGTERM (expected 0 or 143)" >&2
+      status=1
+    elif [ -n "$TEGATA_DB_PATH" ] && [ -s "$TEGATA_DB_PATH-wal" ]; then
+      echo "$TEGATA_DB_PATH-wal is not empty after SIGTERM: the database was not closed" >&2
+      status=1
+    fi
+  fi
+fi
+
+if [ "$status" -ne 0 ]; then
   echo "--- last output from $start_cmd ---" >&2
   tail -n 200 "$log" >&2
 fi
 
-kill "$pid" 2>/dev/null
+kill -KILL "$pid" 2>/dev/null
 wait "$pid" 2>/dev/null
 
 rm -f "$log"
