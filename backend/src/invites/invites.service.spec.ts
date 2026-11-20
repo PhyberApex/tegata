@@ -664,10 +664,12 @@ describe('invitesService', () => {
         ['taken', 'Taken'],
       ])
       const usersService = {
-        createUser: vi.fn(async (username: string, displayname: string) => {
+        createUser: vi.fn(async (username: string, displayname: string, email: string) => {
           await new Promise(resolve => setImmediate(resolve))
           if (accounts.has(username))
             throw new ConflictException(`User "${username}" already exists`)
+          if (email === 'taken@t.com')
+            throw new ConflictException('That email address is already in use')
           accounts.set(username, displayname)
           return { username, displayname }
         }),
@@ -701,6 +703,17 @@ describe('invitesService', () => {
       await expect(
         realService.redeemInvite('race-tok', 'taken', 'Taken', 't@t.com', 'pass1234'),
       ).rejects.toThrow(ConflictException)
+      expect(realService.getById('inv-race')).toMatchObject({ used_by: null, used_at: null })
+
+      await realService.redeemInvite('race-tok', 'fresh', 'Fresh', 'r@t.com', 'pass1234')
+
+      expect(realService.getById('inv-race')?.used_by).toBe('fresh')
+    })
+
+    it('should leave the invite redeemable after a taken email is refused', async () => {
+      await expect(
+        realService.redeemInvite('race-tok', 'fresh', 'Fresh', 'taken@t.com', 'pass1234'),
+      ).rejects.toThrow('That email address is already in use')
       expect(realService.getById('inv-race')).toMatchObject({ used_by: null, used_at: null })
 
       await realService.redeemInvite('race-tok', 'fresh', 'Fresh', 'r@t.com', 'pass1234')

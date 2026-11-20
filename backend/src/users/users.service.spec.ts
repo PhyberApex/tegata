@@ -363,6 +363,27 @@ describe('usersService', () => {
       ).rejects.toThrow(ConflictException)
     })
 
+    it('should refuse an email already on another user, ignoring case and surrounding whitespace, and write nothing', async () => {
+      await expect(
+        service.createUser('charlie', 'Charlie', '  Alice@Example.COM ', 'pass1234', []),
+      ).rejects.toThrow(new ConflictException('That email address is already in use'))
+      expect(hashMock).not.toHaveBeenCalled()
+      expect(writeFileSyncMock).not.toHaveBeenCalled()
+    })
+
+    it('should refuse the second of two overlapping createUser calls for the same email', async () => {
+      useInMemoryUsersFile(USERS_YAML)
+      const hashes = deferredHashes()
+
+      const first = service.createUser('charlie', 'Charlie', 'shared@test.com', 'pass1234', [])
+      const second = service.createUser('dana', 'Dana', 'SHARED@test.com', 'pass5678', [])
+      hashes.resolveAll()
+
+      await expect(first).resolves.toMatchObject({ username: 'charlie' })
+      await expect(second).rejects.toThrow(ConflictException)
+      expect(Object.keys(writtenUsers())).toEqual(['alice', 'bob', 'charlie'])
+    })
+
     it('should keep both users when two createUser calls overlap', async () => {
       useInMemoryUsersFile(USERS_YAML)
       const hashes = deferredHashes()
@@ -533,6 +554,27 @@ describe('usersService', () => {
       expect(written.users.alice.extra).toEqual({ locale: 'de' })
       expect(written.users.alice.given_name).toBe('Alice')
       expect(written.users.bob.extra).toBeUndefined()
+    })
+
+    it('should refuse to change the email to one already on another user and write nothing', () => {
+      expect(() => service.updateUser('bob', { email: 'ALICE@example.com' }))
+        .toThrow(new ConflictException('That email address is already in use'))
+      expect(writeFileSyncMock).not.toHaveBeenCalled()
+    })
+
+    it('should let a user keep their own email, even re-cased', () => {
+      const result = service.updateUser('bob', { email: 'Bob@Example.com' })
+
+      expect(result.email).toBe('Bob@Example.com')
+    })
+
+    it('should not let a duplicate already on file block an edit that leaves the email unchanged', () => {
+      readFileSyncMock.mockReturnValue(USERS_YAML.replace('bob@example.com', 'alice@example.com'))
+
+      const result = service.updateUser('bob', { displayname: 'Robert', email: 'alice@example.com' })
+
+      expect(result).toMatchObject({ displayname: 'Robert', email: 'alice@example.com' })
+      expect(writeFileSyncMock).toHaveBeenCalled()
     })
 
     it('should not touch disabled when the field is omitted', () => {
