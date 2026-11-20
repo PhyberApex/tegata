@@ -35,7 +35,17 @@ function lookupUser(users: Record<string, AutheliaUser>, username: string): Auth
  */
 type DatabaseReadResult
   = | { readable: true, db: UsersDatabase }
-    | { readable: false, reason: string }
+    | { readable: false, kind: UnreadableKind, reason: string }
+
+/**
+ * Why the Users Database is unreadable, as a content-free category — `reason` carries the detail
+ * (file paths, parser snippets of the file's own lines) and must not leave the process unauthenticated.
+ */
+export type UnreadableKind = 'read-error' | 'missing' | 'invalid-yaml' | 'no-users-mapping'
+
+export type UsersDatabaseReadability
+  = | { readable: true }
+    | { readable: false, kind: UnreadableKind, reason: string }
 
 @Injectable()
 export class UsersService implements OnModuleInit {
@@ -84,12 +94,12 @@ export class UsersService implements OnModuleInit {
   private readErrorResult(err: unknown): DatabaseReadResult {
     const isEnoent = err instanceof Error && 'code' in err && err.code === 'ENOENT'
     if (!isEnoent)
-      return { readable: false, reason: `The users database file could not be read: ${err}` }
+      return { readable: false, kind: 'read-error', reason: `The users database file could not be read: ${err}` }
 
     // A Baseline Hash already recorded means the database was live before and is now gone —
     // that's the same risky shape as a parse failure, not the fresh-install case.
     if (this.getIntegrityRow())
-      return { readable: false, reason: 'The users database file is missing' }
+      return { readable: false, kind: 'missing', reason: 'The users database file is missing' }
     return {
       readable: true,
       db: { users: {} },
@@ -102,12 +112,12 @@ export class UsersService implements OnModuleInit {
       parsed = yaml.load(content)
     }
     catch (err) {
-      return { readable: false, reason: `The users database file could not be parsed: ${err}` }
+      return { readable: false, kind: 'invalid-yaml', reason: `The users database file could not be parsed: ${err}` }
     }
 
     const db = parsed as UsersDatabase | null
     if (!db || typeof db.users !== 'object' || db.users === null || Array.isArray(db.users))
-      return { readable: false, reason: 'The users database file does not contain a valid users mapping' }
+      return { readable: false, kind: 'no-users-mapping', reason: 'The users database file does not contain a valid users mapping' }
 
     return { readable: true, db }
   }
@@ -269,6 +279,17 @@ export class UsersService implements OnModuleInit {
     }
 
     return false
+  }
+
+  /**
+   * The Unreadable Users Database rule on its own, with no Out-of-Band Edit bookkeeping (no DB write),
+   * so a health probe can call it as often as it likes.
+   */
+  getReadability(): UsersDatabaseReadability {
+    const result = this.checkReadability()
+    if (result.readable)
+      return { readable: true }
+    return { readable: false, kind: result.kind, reason: result.reason }
   }
 
   getDatabaseIntegrityStatus(): { matches: boolean, unreadable: boolean, unreadableReason: string | null } {
