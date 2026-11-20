@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config'
 import { Throttle } from '@nestjs/throttler'
 import { IsString } from 'class-validator'
 import { usernamePatternSource } from '../config/username-pattern'
+import { AdminAccountCheck } from './admin-account-check'
 import { AuthService } from './auth.service'
 import { NativeLoginFence } from './native-login-fence'
 import { OidcService } from './oidc.service'
@@ -28,6 +29,7 @@ export class AuthController {
     private oidcService: OidcService,
     private fence: NativeLoginFence,
     private config: ConfigService,
+    private adminAccountCheck: AdminAccountCheck,
   ) {}
 
   /**
@@ -69,6 +71,10 @@ export class AuthController {
     return { success: true }
   }
 
+  /**
+   * Re-checks an OIDC admin session the same way `AuthGuard` does, so the SPA's router guard sends a
+   * revoked admin to the login page instead of rendering a shell whose every call answers 401.
+   */
   @Get('check')
   check(@Req() req: Request) {
     const token = req.cookies?.tegata_token
@@ -77,6 +83,7 @@ export class AuthController {
     }
 
     const payload = this.authService.verifyToken(token)
+    this.adminAccountCheck.assertStillAdmin(payload, 'Auth check')
     return { authenticated: true, role: payload.role }
   }
 

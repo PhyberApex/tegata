@@ -104,6 +104,16 @@ describe('profile over HTTP', () => {
     expect(((await res.json()) as { message: string }).message).toBe('That email address is already in use')
   })
 
+  it.each(['', '   '])('should answer 400 to the blank displayname %j and change nothing', async (displayname) => {
+    expect((await send('PATCH', '/profile', { displayname })).status).toBe(400)
+    expect(usersService.updateUser).not.toHaveBeenCalled()
+  })
+
+  it('should store a displayname with its surrounding whitespace trimmed', async () => {
+    expect((await send('PATCH', '/profile', { displayname: '  Alice  ' })).status).toBe(200)
+    expect(usersService.updateUser).toHaveBeenCalledWith('bob', { displayname: 'Alice' })
+  })
+
   it('should answer 401 to a Disabled user\'s still-valid session and change nothing', async () => {
     users.bob.disabled = true
 
