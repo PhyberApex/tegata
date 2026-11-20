@@ -448,8 +448,8 @@ export class UsersService implements OnModuleInit {
     password: string,
     groups: string[],
   ) {
-    // Refused before the hash so a taken username costs no argon2 run; re-checked under the mutation below,
-    // since another create may have taken it while this one was hashing.
+    // Refused before the hash so a taken username or email costs no argon2 run; re-checked under the mutation
+    // below, since another create may have taken either while this one was hashing.
     const current = this.readDatabaseOrThrow()
     this.assertUsernameFree(current, username)
     this.assertEmailFree(current, email)
