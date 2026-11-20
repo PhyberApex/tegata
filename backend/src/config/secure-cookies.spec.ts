@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { warnIfInsecureCookies } from './secure-cookies'
+import { cookiesAreSecure, warnIfInsecureCookies } from './secure-cookies'
 
 describe('warnIfInsecureCookies', () => {
   it('is silent when NODE_ENV is production', () => {
@@ -20,5 +20,15 @@ describe('warnIfInsecureCookies', () => {
     warnIfInsecureCookies('development', warn)
     expect(warn).toHaveBeenCalledOnce()
     expect(warn.mock.calls[0][0]).toMatch(/NODE_ENV is "development".*without the Secure flag/)
+  })
+})
+
+describe('cookiesAreSecure', () => {
+  it.each([
+    ['production', true],
+    [undefined, false],
+    ['development', false],
+  ])('nODE_ENV %s -> %s', (nodeEnv, secure) => {
+    expect(cookiesAreSecure(nodeEnv)).toBe(secure)
   })
 })

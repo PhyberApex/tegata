@@ -21,6 +21,7 @@ async function bootstrap() {
 
   const logger = new DynamicLogger('log')
   setDynamicLoggerInstance(logger)
+  // process.env, not ConfigService: the cookie flag is fixed from it when the auth controller loads
   warnIfInsecureCookies(process.env.NODE_ENV, message => logger.warn(message, 'Bootstrap'))
   installFetchLogger({
     verbosePatterns: ['/metrics', '/health'],
