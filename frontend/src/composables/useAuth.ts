@@ -1,15 +1,28 @@
+import type { AuthCheck, SessionRole } from '@tegata/shared'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useApi } from './useApi'
 
-export type SessionRole = 'admin' | 'self'
+export type { SessionRole }
 
 export const authenticated = ref(false)
 export const role = ref<SessionRole | null>(null)
 /** The account this session acts as; `null` for a Native Login session, which has none. */
 export const username = ref<string | null>(null)
 
-export interface AuthCheck { authenticated: boolean, role: SessionRole, username: string | null }
+/** Records the session `GET /api/auth/check` (or a native login) just established. */
+export function startSession(session: Pick<AuthCheck, 'role' | 'username'>) {
+  authenticated.value = true
+  role.value = session.role
+  username.value = session.username
+}
+
+/** Forgets the session client-side; routing to the login page is the caller's. */
+export function forgetSession() {
+  authenticated.value = false
+  role.value = null
+  username.value = null
+}
 
 const ADMIN_ONLY_ROUTE_NAMES = new Set([
   'users',
@@ -22,16 +35,15 @@ const ADMIN_ONLY_ROUTE_NAMES = new Set([
  * Where a session may not go: a self session is held to its profile, and a session with no account (a
  * Native Login admin) is kept off the profile, whose every call would answer 401 for it.
  */
-export function redirectForRole(
-  sessionRole: SessionRole,
-  sessionUsername: string | null,
+export function redirectForSession(
+  session: Pick<AuthCheck, 'role' | 'username'>,
   routeName: string | symbol | null | undefined,
 ): string | null {
   if (typeof routeName !== 'string')
     return null
-  if (sessionRole === 'self' && ADMIN_ONLY_ROUTE_NAMES.has(routeName))
+  if (session.role === 'self' && ADMIN_ONLY_ROUTE_NAMES.has(routeName))
     return '/profile'
-  if (sessionUsername === null && routeName === 'profile')
+  if (session.username === null && routeName === 'profile')
     return '/'
   return null
 }
@@ -42,24 +54,17 @@ export function useAuth() {
 
   async function checkAuth() {
     try {
-      const res = await api.get<AuthCheck>('/api/auth/check')
-      authenticated.value = true
-      role.value = res.role
-      username.value = res.username ?? null
+      startSession(await api.get<AuthCheck>('/api/auth/check'))
     }
     catch {
-      authenticated.value = false
-      role.value = null
-      username.value = null
+      forgetSession()
       router.push('/login')
     }
   }
 
   async function login(password: string) {
     await api.post('/api/auth/login', { password })
-    authenticated.value = true
-    role.value = 'admin'
-    username.value = null
+    startSession({ role: 'admin', username: null })
     router.push('/')
   }
 
@@ -70,9 +75,7 @@ export function useAuth() {
       await api.post('/api/auth/logout')
     }
     catch {}
-    authenticated.value = false
-    role.value = null
-    username.value = null
+    forgetSession()
     router.push('/login')
   }
 

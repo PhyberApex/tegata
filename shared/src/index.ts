@@ -4,4 +4,5 @@
 export * from './access-preview.js'
 export * from './group.js'
 export * from './invite.js'
+export * from './session.js'
 export * from './username.js'

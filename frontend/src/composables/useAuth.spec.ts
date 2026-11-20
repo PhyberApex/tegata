@@ -1,20 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { authenticated, redirectForRole, role, useAuth } from './useAuth'
+import { authenticated, redirectForSession, role, useAuth } from './useAuth'
 
-describe('redirectForRole', () => {
+describe('redirectForSession', () => {
   it.each([
     'users',
     'invites',
     'groups',
     'bundles',
   ])('redirects a self session away from %s to /profile', (routeName) => {
-    expect(redirectForRole('self', 'bob', routeName)).toBe('/profile')
+    expect(redirectForSession({ role: 'self', username: 'bob' }, routeName)).toBe('/profile')
   })
 
   it('does not redirect a self session already on /profile', () => {
-    expect(redirectForRole('self', 'bob', 'profile')).toBeNull()
+    expect(redirectForSession({ role: 'self', username: 'bob' }, 'profile')).toBeNull()
   })
 
   it.each([
@@ -26,11 +26,11 @@ describe('redirectForRole', () => {
     undefined,
     null,
   ])('never redirects an OIDC admin session (route: %s)', (routeName) => {
-    expect(redirectForRole('admin', 'alice', routeName)).toBeNull()
+    expect(redirectForSession({ role: 'admin', username: 'alice' }, routeName)).toBeNull()
   })
 
   it('sends a session with no username (Native Login) from /profile to /', () => {
-    expect(redirectForRole('admin', null, 'profile')).toBe('/')
+    expect(redirectForSession({ role: 'admin', username: null }, 'profile')).toBe('/')
   })
 
   it.each([
@@ -39,7 +39,7 @@ describe('redirectForRole', () => {
     'groups',
     'bundles',
   ])('lets a session with no username onto %s', (routeName) => {
-    expect(redirectForRole('admin', null, routeName)).toBeNull()
+    expect(redirectForSession({ role: 'admin', username: null }, routeName)).toBeNull()
   })
 })
 

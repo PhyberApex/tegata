@@ -1,5 +1,5 @@
 import router from '../router'
-import { authenticated, role, username } from './useAuth'
+import { forgetSession } from './useAuth'
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public body: Record<string, unknown>) {
@@ -16,9 +16,7 @@ export function isEnabledCountGuardError(err: unknown): err is ApiError {
 const CREDENTIAL_OR_TOKEN_URL = /^\/api\/(?:auth\/|invites\/[^/]+\/(?:validate|redeem)$|reset-tokens\/[^/]+\/(?:validate|redeem)$|profile\/password$)/
 
 function endSession() {
-  authenticated.value = false
-  role.value = null
-  username.value = null
+  forgetSession()
   router.push({ name: 'login' })
 }
 

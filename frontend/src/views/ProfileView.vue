@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import type { OwnProfile } from '@tegata/shared'
 import { onMounted, ref } from 'vue'
 import { useApi } from '../composables/useApi'
 import { passwordMatchError } from '../composables/useRegisterForm'
 
-interface ProfileFields { displayname: string, email: string }
+type ProfileFields = Pick<OwnProfile, 'displayname' | 'email'>
 
 const api = useApi()
 
@@ -18,7 +19,7 @@ const profileUnchanged = ref(false)
 
 onMounted(async () => {
   try {
-    const profile = await api.get<ProfileFields & { username: string }>('/api/profile')
+    const profile = await api.get<OwnProfile>('/api/profile')
     username.value = profile.username
     saved.value = { displayname: profile.displayname, email: profile.email }
     profileForm.value = { ...saved.value }
@@ -56,11 +57,10 @@ async function handleUpdateProfile() {
 
   profileLoading.value = true
   try {
-    await api.patch('/api/profile', changes)
-    saved.value = {
-      ...saved.value!,
-      ...changes,
-    }
+    // The stored values, not the typed ones: the backend trims a displayname.
+    const stored = await api.patch<ProfileFields>('/api/profile', changes)
+    saved.value = { displayname: stored.displayname, email: stored.email }
+    profileForm.value = { ...saved.value }
     profileSuccess.value = true
   }
   catch (err) {

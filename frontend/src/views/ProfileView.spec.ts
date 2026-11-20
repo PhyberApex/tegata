@@ -14,14 +14,17 @@ const fetchMock = vi.fn()
 
 const ON_FILE = { username: 'alice', displayname: 'Alice', email: 'alice@example.test' }
 
-/** Answers the mount-time `GET /api/profile` with `profile`, and every PATCH with `patch` (or a success). */
+/** Answers the mount-time `GET /api/profile` with `profile`, and every PATCH with `patch` (or the patched record). */
 function respond({ profile = ON_FILE, patch }: { profile?: typeof ON_FILE, patch?: () => Promise<Response> } = {}) {
   fetchMock.mockImplementation((url: string, init?: RequestInit) => {
     if (url === '/api/profile' && (init?.method ?? 'GET') === 'GET')
       return Promise.resolve(jsonResponse(profile))
     return patch
       ? patch()
-      : Promise.resolve(jsonResponse({ success: true }))
+      : Promise.resolve(jsonResponse({
+          ...profile,
+          ...JSON.parse(init!.body as string),
+        }))
   })
 }
 
@@ -102,11 +105,7 @@ describe('profileView handleUpdateProfile', () => {
 
     await submitProfile(wrapper)
 
-    for (const [, init] of patchCalls()) {
-      const body = JSON.parse(init.body)
-      expect(body).not.toHaveProperty('displayname')
-      expect(body).not.toHaveProperty('email')
-    }
+    expect(patchCalls()).toHaveLength(0)
     expect(profileForm(wrapper).find('[role="alert"]').exists()).toBe(false)
     expect(profileForm(wrapper).find('[role="status"]').text()).toBe('Nothing changed.')
   })
@@ -137,6 +136,17 @@ describe('profileView handleUpdateProfile', () => {
 
     expect(sentBody(0)).toEqual({ displayname: 'Alice A' })
     expect(sentBody(1)).toEqual({ email: 'alice@new.test' })
+  })
+
+  it('shows the stored value after a save, not the one typed', async () => {
+    respond({
+      patch: () => Promise.resolve(jsonResponse({ ...ON_FILE, displayname: 'Alice A' })),
+    })
+    const wrapper = await mountView()
+
+    await submitProfile(wrapper, { displayname: '  Alice A  ' })
+
+    expect((wrapper.find('#profile-displayname').element as HTMLInputElement).value).toBe('Alice A')
   })
 
   it('shows the backend\'s validation message and no success', async () => {
@@ -179,7 +189,7 @@ describe('profileView handleUpdateProfile', () => {
     expect(save.attributes('disabled')).toBeDefined()
     expect(save.text()).toBe('Saving...')
 
-    answer(jsonResponse({ success: true }))
+    answer(jsonResponse({ ...ON_FILE, displayname: 'Alice A' }))
     await flushPromises()
 
     expect(save.attributes('disabled')).toBeUndefined()
@@ -189,7 +199,7 @@ describe('profileView handleUpdateProfile', () => {
   it('clears an earlier error when the next save succeeds', async () => {
     const answers = [
       jsonResponse({ message: 'email must be an email' }, 400),
-      jsonResponse({ success: true }),
+      jsonResponse({ ...ON_FILE, email: 'alice@new.test' }),
     ]
     respond({
       patch: () => Promise.resolve(answers.shift()!),

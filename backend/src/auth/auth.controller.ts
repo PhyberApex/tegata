@@ -1,3 +1,4 @@
+import type { AuthCheck } from '@tegata/shared'
 import type { Request, Response } from 'express'
 import process from 'node:process'
 import { Body, Controller, Get, Logger, Post, Req, Res, UnauthorizedException } from '@nestjs/common'
@@ -78,7 +79,7 @@ export class AuthController {
    * is the token's `sub`, `null` for a Native Login session, which has no account to show a profile for.
    */
   @Get('check')
-  check(@Req() req: Request) {
+  check(@Req() req: Request): AuthCheck {
     const token = req.cookies?.tegata_token
     if (!token) {
       throw new UnauthorizedException('Not authenticated')

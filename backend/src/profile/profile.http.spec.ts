@@ -19,20 +19,25 @@ import { ProfileController } from './profile.controller'
  * stand-in (its own spec holds the real Disabled rule), so what this exercises is the cookie, the JWT and
  * the guard refusing before any handler runs.
  */
+const JWT_SECRET = 'spec-secret'
+
 describe('profile over HTTP', () => {
   let app: INestApplication
   let baseUrl: string
   let token: string
   let nativeToken: string
   const users: Record<string, { disabled: boolean }> = {}
-  const usersService: Mocked<Pick<UsersService, 'isEnabledUser' | 'getUser' | 'updateUser' | 'verifyPassword' | 'resetPassword'>> = {
+  const usersService: Mocked<Pick<UsersService, 'isEnabledUser' | 'lookupAccount' | 'updateUser' | 'verifyPassword' | 'resetPassword'>> = {
     isEnabledUser: vi.fn((username: string) => Boolean(users[username]) && !users[username].disabled),
-    getUser: vi.fn((username: string) => ({
-      username,
-      displayname: 'Bob',
-      email: 'bob@example.com',
-      groups: ['users'],
-      disabled: false,
+    lookupAccount: vi.fn((username: string) => ({
+      readable: true as const,
+      user: {
+        username,
+        displayname: 'Bob',
+        email: 'bob@example.com',
+        groups: ['users'],
+        disabled: false,
+      },
     })),
     updateUser: vi.fn(),
     verifyPassword: vi.fn(async () => true),
@@ -42,7 +47,7 @@ describe('profile over HTTP', () => {
   beforeAll(async () => {
     const config = {
       get: (_key: string, fallback: string) => fallback,
-      getOrThrow: (key: string) => ({ TEGATA_ADMIN_PASSWORD_HASH: 'unused', TEGATA_JWT_SECRET: 'spec-secret' })[key],
+      getOrThrow: (key: string) => ({ TEGATA_ADMIN_PASSWORD_HASH: 'unused', TEGATA_JWT_SECRET: JWT_SECRET })[key],
     }
     const moduleRef = await Test.createTestingModule({
       controllers: [ProfileController],
@@ -69,7 +74,7 @@ describe('profile over HTTP', () => {
     baseUrl = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}/api`
     token = moduleRef.get(AuthService).loginWithOidc('bob', false)
     // A Native Login session: what `AuthService.login` signs, without going through the Break-Glass Fence.
-    nativeToken = sign({ role: 'admin' }, 'spec-secret', { expiresIn: '1h' })
+    nativeToken = sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '1h' })
   })
 
   beforeEach(() => {
@@ -115,12 +120,12 @@ describe('profile over HTTP', () => {
 
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ username: 'bob', displayname: 'Bob', email: 'bob@example.com' })
-    expect(usersService.getUser).toHaveBeenCalledWith('bob')
+    expect(usersService.lookupAccount).toHaveBeenCalledWith('bob')
   })
 
   it('should answer 401 to a Native Login session, which has no sub, and read nothing', async () => {
     expect((await getProfile(nativeToken)).status).toBe(401)
-    expect(usersService.getUser).not.toHaveBeenCalled()
+    expect(usersService.lookupAccount).not.toHaveBeenCalled()
   })
 
   it('should answer 409 without naming the other account when the email is already on another user', async () => {
@@ -150,7 +155,7 @@ describe('profile over HTTP', () => {
     expect((await getProfile()).status).toBe(401)
     expect((await patchProfile()).status).toBe(401)
     expect((await changePassword()).status).toBe(401)
-    expect(usersService.getUser).not.toHaveBeenCalled()
+    expect(usersService.lookupAccount).not.toHaveBeenCalled()
     expect(usersService.updateUser).not.toHaveBeenCalled()
     expect(usersService.verifyPassword).not.toHaveBeenCalled()
     expect(usersService.resetPassword).not.toHaveBeenCalled()

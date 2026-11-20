@@ -8,11 +8,11 @@ import { ProfileController } from './profile.controller'
 
 describe('profileController', () => {
   let controller: ProfileController
-  let mockUsersService: Mocked<Pick<UsersService, 'getUser' | 'updateUser' | 'verifyPassword' | 'resetPassword'>>
+  let mockUsersService: Mocked<Pick<UsersService, 'lookupAccount' | 'updateUser' | 'verifyPassword' | 'resetPassword'>>
 
   beforeEach(async () => {
     mockUsersService = {
-      getUser: vi.fn(),
+      lookupAccount: vi.fn(),
       updateUser: vi.fn(),
       verifyPassword: vi.fn(),
       resetPassword: vi.fn(),
@@ -39,12 +39,15 @@ describe('profileController', () => {
 
   describe('get', () => {
     it('should return the session user\'s username, displayname and email, and not their groups', () => {
-      mockUsersService.getUser.mockReturnValue({
-        username: 'alice',
-        displayname: 'Alice A',
-        email: 'alice@example.com',
-        groups: ['admins'],
-        disabled: false,
+      mockUsersService.lookupAccount.mockReturnValue({
+        readable: true,
+        user: {
+          username: 'alice',
+          displayname: 'Alice A',
+          email: 'alice@example.com',
+          groups: ['admins'],
+          disabled: false,
+        },
       })
 
       expect(controller.get(requestFor('alice'))).toEqual({
@@ -52,13 +55,19 @@ describe('profileController', () => {
         displayname: 'Alice A',
         email: 'alice@example.com',
       })
-      expect(mockUsersService.getUser).toHaveBeenCalledWith('alice')
+      expect(mockUsersService.lookupAccount).toHaveBeenCalledWith('alice')
     })
 
     it('should answer 404 when the user vanished between the guard and the read', () => {
-      mockUsersService.getUser.mockReturnValue(null)
+      mockUsersService.lookupAccount.mockReturnValue({ readable: true, user: null })
 
       expect(() => controller.get(requestFor('alice'))).toThrow(NotFoundException)
+    })
+
+    it('should answer 503, not 404, when the users database turned Unreadable after the guard\'s read', () => {
+      mockUsersService.lookupAccount.mockReturnValue({ readable: false })
+
+      expect(() => controller.get(requestFor('alice'))).toThrow(ServiceUnavailableException)
     })
   })
 
