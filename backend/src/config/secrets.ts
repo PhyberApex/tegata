@@ -4,6 +4,7 @@ import { verify } from 'argon2'
 const MIN_JWT_SECRET_LENGTH = 32
 const PLACEHOLDER_JWT_SECRET = 'change-me'
 const ARGON2_PREFIX = /^\$argon2(?:id|i|d)\$/
+const JWT_SECRET_FIX = 'generate one with: openssl rand -hex 32'
 const DOLLAR_RULE = 'In a compose `environment:` list every `$` in the hash has to be doubled (`$$`); in an `env_file:` it is taken literally.'
 
 /**
@@ -13,20 +14,20 @@ const DOLLAR_RULE = 'In a compose `environment:` list every `$` in the hash has 
  */
 export function assertJwtSecret(secret: string): void {
   if (secret === PLACEHOLDER_JWT_SECRET)
-    throw new Error(`TEGATA_JWT_SECRET is still the "${PLACEHOLDER_JWT_SECRET}" placeholder from .env.example; generate one with: openssl rand -hex 32`)
+    throw new Error(`TEGATA_JWT_SECRET is still the "${PLACEHOLDER_JWT_SECRET}" placeholder from .env.example; ${JWT_SECRET_FIX}`)
   if (secret.length < MIN_JWT_SECRET_LENGTH)
-    throw new Error(`TEGATA_JWT_SECRET must be at least ${MIN_JWT_SECRET_LENGTH} characters, got ${secret.length}; generate one with: openssl rand -hex 32`)
+    throw new Error(`TEGATA_JWT_SECRET must be at least ${MIN_JWT_SECRET_LENGTH} characters, got ${secret.length}; ${JWT_SECRET_FIX}`)
 }
 
 /**
  * Throws unless TEGATA_ADMIN_PASSWORD_HASH is an argon2 PHC string argon2 can verify against, so a
- * mangled hash refuses to boot instead of turning the break-glass login into a 500 the moment it
- * is needed. Runs one verification with the hash's own parameters to prove it parses.
+ * mangled hash refuses to boot instead of turning Native Login into a 500 the moment it is needed.
+ * Runs one verification with the hash's own parameters to prove it parses.
  */
 export async function assertAdminPasswordHash(passwordHash: string): Promise<void> {
   if (!ARGON2_PREFIX.test(passwordHash)) {
     throw new Error(
-      `TEGATA_ADMIN_PASSWORD_HASH must be an argon2 hash starting with $argon2id$, $argon2i$ or $argon2d$, got one starting "${passwordHash.slice(0, 10)}". ${DOLLAR_RULE}`,
+      `TEGATA_ADMIN_PASSWORD_HASH must be an argon2 hash starting with $argon2id$, $argon2i$ or $argon2d$. ${DOLLAR_RULE}`,
     )
   }
   try {

@@ -1,4 +1,4 @@
-import { hash } from 'argon2'
+import { argon2d, argon2i, hash } from 'argon2'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { assertAdminPasswordHash, assertJwtSecret, assertSecrets } from './secrets'
 
@@ -54,8 +54,8 @@ describe('assertAdminPasswordHash', () => {
 
   it('accepts a real argon2id hash, and argon2i/argon2d ones', async () => {
     await expect(assertAdminPasswordHash(valid)).resolves.toBeUndefined()
-    await expect(assertAdminPasswordHash(await hash('pw', { ...CHEAP, type: 1 }))).resolves.toBeUndefined()
-    await expect(assertAdminPasswordHash(await hash('pw', { ...CHEAP, type: 0 }))).resolves.toBeUndefined()
+    await expect(assertAdminPasswordHash(await hash('pw', { ...CHEAP, type: argon2i }))).resolves.toBeUndefined()
+    await expect(assertAdminPasswordHash(await hash('pw', { ...CHEAP, type: argon2d }))).resolves.toBeUndefined()
   })
 
   it('checks the value exactly as login will use it, so stray whitespace is refused', async () => {
