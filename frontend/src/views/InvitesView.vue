@@ -46,6 +46,7 @@ const expiredInvites = computed(() =>
 )
 
 async function loadData() {
+  error.value = ''
   try {
     const [inv, grp, bnd] = await Promise.all([
       api.get<Invite[]>('/api/invites'),
@@ -123,6 +124,7 @@ async function handleRevoke() {
 }
 
 async function handleSend(invite: Invite) {
+  error.value = ''
   sendingId.value = invite.id
   try {
     await api.post(`/api/invites/${invite.id}/send`)
@@ -139,6 +141,7 @@ async function handleSend(invite: Invite) {
 }
 
 async function handleRemove(id: string) {
+  error.value = ''
   try {
     await api.del(`/api/invites/${id}`)
     await loadData()
@@ -151,6 +154,7 @@ async function handleRemove(id: string) {
 }
 
 async function copyLink(invite: Invite) {
+  error.value = ''
   try {
     await navigator.clipboard.writeText(inviteUrl(invite.token))
     copiedId.value = invite.id

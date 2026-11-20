@@ -46,6 +46,7 @@ const rowActions: RowAction<Bundle>[] = [
 ]
 
 async function loadData() {
+  error.value = ''
   try {
     const [b, g] = await Promise.all([
       api.get<Bundle[]>('/api/bundles'),
