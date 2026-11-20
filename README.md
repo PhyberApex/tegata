@@ -248,7 +248,7 @@ open — it is open on purpose.
 | `USERNAME_PATTERN` | no | `^[a-z0-9][a-z0-9._-]{0,63}$` | the regular expression new usernames (created by an admin or chosen on invite redemption) must match; existing users are never re-checked; a pattern that does not compile refuses to boot. Email addresses are unique too: creating a user, redeeming an invite or changing an email (admin edit or `PATCH /api/profile`) to an address already on another user (compared trimmed and case-insensitively) answers `409 That email address is already in use`, as Authelia's file backend requires once `search.email` is on; duplicates already on file are left alone and only a new or changed address is checked |
 | `ARGON2_MEMORY_KIB` / `ARGON2_ITERATIONS` / `ARGON2_PARALLELISM` | no | `65536` / `3` / `4` | the argon2id cost of password hashes Tegata generates (see [Tuning password hashing](#tuning-password-hashing)); positive integers, memory at least 8 × parallelism; anything else refuses to boot |
 | `STATUS_ENDPOINT_TOKEN` | no | — | enables `GET /api/status` and is the token it requires (`Authorization: Bearer <token>`, or `?token=`); unset, the endpoint is a 404 |
-| `NODE_ENV` | no | — | `production` sets the `Secure` flag on cookies; set it |
+| `NODE_ENV` | no | `production` in the image | `production` sets the `Secure` flag on cookies. Any other value (e.g. `development`) drops it and logs a warning at boot; that is only needed when Tegata is reached over plain HTTP on a non-localhost address |
 
 By default Tegata trusts exactly one proxy hop for `X-Forwarded-For`, so `req.ip` under your
 reverse proxy is the client's address — which is what the login fence judges. With no proxy in
