@@ -8,6 +8,7 @@ import { AppModule } from './app.module'
 import { DynamicLogger, installFetchLogger, setDynamicLoggerInstance } from './common'
 import { assertArgon2Options } from './config/argon2-options'
 import { parseTrustProxy } from './config/parse-trust-proxy'
+import { assertSecrets } from './config/secrets'
 import { assertUsernamePattern } from './config/username-pattern'
 import { parseListenPort } from './listen-port'
 
@@ -25,7 +26,10 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule, { logger })
 
-  const trustProxy = parseTrustProxy(app.get(ConfigService).get<string>('TRUST_PROXY'))
+  const config = app.get(ConfigService)
+  // Read through ConfigService, not process.env: it is what has loaded .env by now
+  await assertSecrets(key => config.get<string>(key))
+  const trustProxy = parseTrustProxy(config.get<string>('TRUST_PROXY'))
 
   // How many hops (or which addresses) between the client and Tegata to trust, so req.ip and
   // req.protocol read the forwarded headers correctly
