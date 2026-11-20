@@ -133,13 +133,12 @@ describe('statusService', () => {
       expect(result.authelia.ok).toBe(true)
     })
 
-    it('should return an infinite, not-ok age when the file is missing or unreadable', async () => {
+    it('should return a null, not-ok age when the file is missing or unreadable', async () => {
       statMock.mockRejectedValue(new Error('ENOENT'))
 
       const result = await service.getStatus()
 
-      expect(result.authelia.ageHours).toBe(Infinity)
-      expect(result.authelia.ok).toBe(false)
+      expect(result.authelia).toEqual({ ageHours: null, ok: false })
     })
   })
 })
