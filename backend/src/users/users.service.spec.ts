@@ -62,11 +62,12 @@ const fsyncSyncMock = fsyncSync as unknown as Mock
 const closeSyncMock = closeSync as unknown as Mock
 const rmSyncMock = rmSync as unknown as Mock
 
-/** The descriptor the mocked openSync hands out for the users tmp file; the directory gets DIR_FD. */
+const TMP_PATH = '/tmp/users.yml.tmp'
+/** The descriptor the mocked openSync hands out for TMP_PATH; the directory gets DIR_FD. */
 const TMP_FD = 41
 const DIR_FD = 42
 function openSyncFake(path: string): number {
-  return path === '/tmp/users.yml.tmp'
+  return path === TMP_PATH
     ? TMP_FD
     : DIR_FD
 }
@@ -201,7 +202,7 @@ function useInMemoryUsersFile(initial: string) {
   })
   writeFileSyncMock.mockImplementation((fd: number, content: string) => {
     if (fd === TMP_FD)
-      files.set('/tmp/users.yml.tmp', content)
+      files.set(TMP_PATH, content)
   })
   renameSyncMock.mockImplementation((from: string, to: string) => {
     files.set(to, files.get(from)!)
@@ -355,7 +356,7 @@ describe('usersService', () => {
         expect.stringContaining('charlie'),
         'utf-8',
       )
-      expect(renameSyncMock).toHaveBeenCalledWith('/tmp/users.yml.tmp', '/tmp/users.yml')
+      expect(renameSyncMock).toHaveBeenCalledWith(TMP_PATH, '/tmp/users.yml')
     })
 
     it('should preserve existing file permissions across the rename', async () => {
@@ -365,13 +366,13 @@ describe('usersService', () => {
 
       await service.createUser('erin', 'Erin', 'erin@test.com', 'pass1234', [])
 
-      expect(chmodSyncMock).toHaveBeenCalledWith('/tmp/users.yml.tmp', 0o644)
+      expect(chmodSyncMock).toHaveBeenCalledWith(TMP_PATH, 0o644)
     })
 
     it('should create the tmp file 0600 and fsync and close it before the rename', async () => {
       await service.createUser('erin', 'Erin', 'erin@test.com', 'pass1234', [])
 
-      expect(openSyncMock).toHaveBeenCalledWith('/tmp/users.yml.tmp', 'w', 0o600)
+      expect(openSyncMock).toHaveBeenCalledWith(TMP_PATH, 'w', 0o600)
       expect(fsyncSyncMock).toHaveBeenCalledWith(TMP_FD)
       expect(closeSyncMock).toHaveBeenCalledWith(TMP_FD)
       const renameOrder = renameSyncMock.mock.invocationCallOrder[0]
@@ -400,7 +401,7 @@ describe('usersService', () => {
       })
 
       await expect(service.createUser('erin', 'Erin', 'erin@test.com', 'pass1234', [])).resolves.toBeDefined()
-      expect(renameSyncMock).toHaveBeenCalledWith('/tmp/users.yml.tmp', '/tmp/users.yml')
+      expect(renameSyncMock).toHaveBeenCalledWith(TMP_PATH, '/tmp/users.yml')
     })
 
     it('should remove the tmp file and rethrow when the fsync fails', async () => {
@@ -410,7 +411,18 @@ describe('usersService', () => {
       await expect(service.createUser('erin', 'Erin', 'erin@test.com', 'pass1234', [])).rejects.toBe(eio)
       expect(closeSyncMock).toHaveBeenCalledWith(TMP_FD)
       expect(renameSyncMock).not.toHaveBeenCalled()
-      expect(rmSyncMock).toHaveBeenLastCalledWith('/tmp/users.yml.tmp', { force: true })
+      expect(rmSyncMock).toHaveBeenLastCalledWith(TMP_PATH, { force: true })
+    })
+
+    it('should rethrow the write error, not the cleanup error, when removing the tmp file also fails', async () => {
+      const ebusy = Object.assign(new Error('EBUSY'), { code: 'EBUSY' })
+      renameSyncMock.mockImplementationOnce(() => { throw ebusy })
+      rmSyncMock
+        .mockImplementationOnce(() => {})
+        .mockImplementationOnce(() => { throw Object.assign(new Error('EACCES'), { code: 'EACCES' }) })
+
+      await expect(service.createUser('erin', 'Erin', 'erin@test.com', 'pass1234', [])).rejects.toBe(ebusy)
+      expect(rmSyncMock).toHaveBeenCalledTimes(2)
     })
 
     it('should remove the tmp file and rethrow when the rename fails', async () => {
@@ -418,7 +430,7 @@ describe('usersService', () => {
       renameSyncMock.mockImplementationOnce(() => { throw ebusy })
 
       await expect(service.createUser('erin', 'Erin', 'erin@test.com', 'pass1234', [])).rejects.toBe(ebusy)
-      expect(rmSyncMock).toHaveBeenLastCalledWith('/tmp/users.yml.tmp', { force: true })
+      expect(rmSyncMock).toHaveBeenLastCalledWith(TMP_PATH, { force: true })
     })
 
     it('should call ensureGroup for each group', async () => {
@@ -1126,7 +1138,7 @@ describe('usersService', () => {
       await expect(
         service.createUser('charlie', 'Charlie', 'charlie@test.com', 'password123', ['users']),
       ).resolves.toBeDefined()
-      expect(renameSyncMock).toHaveBeenCalledWith('/tmp/users.yml.tmp', '/tmp/users.yml')
+      expect(renameSyncMock).toHaveBeenCalledWith(TMP_PATH, '/tmp/users.yml')
     })
   })
 
@@ -1183,7 +1195,7 @@ describe('usersService', () => {
         expect.not.stringContaining('bob'),
         'utf-8',
       )
-      expect(renameSyncMock).toHaveBeenCalledWith('/tmp/users.yml.tmp', '/tmp/users.yml')
+      expect(renameSyncMock).toHaveBeenCalledWith(TMP_PATH, '/tmp/users.yml')
     })
 
     it('should cascade delete the user\'s outstanding reset tokens', () => {

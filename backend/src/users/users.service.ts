@@ -206,8 +206,8 @@ export class UsersService implements OnModuleInit {
 
   /**
    * Write-then-rename keeps the swap atomic so Authelia's file watcher never reloads a partial file. The tmp
-   * file is fsynced before the rename — otherwise a crash can leave the users file name pointing at a
-   * zero-length file, with the previous content already replaced — and the directory after it, so the rename
+   * file is fsynced before the rename — otherwise a crash can leave the Authelia Users Database's name pointing
+   * at a zero-length file, with the previous content already replaced — and the directory after it, so the rename
    * itself survives. A failure before the rename lands removes the tmp file, which holds every password hash.
    */
   private replaceFileDurably(content: string): void {
@@ -229,7 +229,13 @@ export class UsersService implements OnModuleInit {
       renameSync(tmpPath, this.filePath)
     }
     catch (err) {
-      rmSync(tmpPath, { force: true })
+      try {
+        rmSync(tmpPath, { force: true })
+      }
+      catch (cleanupErr) {
+        // The write's own error is the one the caller needs; a failed cleanup must not replace it
+        this.logger.warn(`Could not remove ${tmpPath} after a failed write: ${cleanupErr}`)
+      }
       throw err
     }
 
@@ -244,7 +250,7 @@ export class UsersService implements OnModuleInit {
       }
     }
     catch (err) {
-      this.logger.debug(`Could not fsync the users database directory: ${err}`)
+      this.logger.warn(`Could not fsync the Authelia Users Database's directory: ${err}`)
     }
   }
 
