@@ -1,9 +1,12 @@
 import type { Mocked } from 'vitest'
+import type { AccountLookup, PublicUser } from '../users/users.service'
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Test, TestingModule } from '@nestjs/testing'
 import { DEFAULT_USERNAME_PATTERN } from '@tegata/shared'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { UsersService } from '../users/users.service'
+import { AdminAccountCheck } from './admin-account-check'
 import { AuthController } from './auth.controller'
 import { AuthService } from './auth.service'
 import { NativeLoginFence } from './native-login-fence'
@@ -21,10 +24,26 @@ vi.mock('openid-client', () => ({
   authorizationCodeGrant: vi.fn(),
 }))
 
+/** A readable lookup of alice, an Enabled member of the default required group unless overridden. */
+function aliceLookup(overrides: Partial<PublicUser> = {}): AccountLookup {
+  return {
+    readable: true,
+    user: {
+      username: 'alice',
+      displayname: 'Alice',
+      email: '',
+      groups: ['tegata'],
+      disabled: false,
+      ...overrides,
+    },
+  }
+}
+
 describe('authController', () => {
   let controller: AuthController
   let mockAuthService: Mocked<Pick<AuthService, 'login' | 'verifyToken' | 'loginWithOidc'>>
   let mockOidcService: Mocked<Pick<OidcService, 'buildAuthorizationUrl' | 'exchangeCode' | 'getRequiredGroup'>>
+  let mockUsersService: Mocked<Pick<UsersService, 'lookupAccount'>>
 
   beforeEach(async () => {
     mockAuthService = {
@@ -37,6 +56,10 @@ describe('authController', () => {
       buildAuthorizationUrl: vi.fn(),
       exchangeCode: vi.fn(),
       getRequiredGroup: vi.fn().mockReturnValue('tegata'),
+    }
+
+    mockUsersService = {
+      lookupAccount: vi.fn().mockReturnValue(aliceLookup()),
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -53,6 +76,8 @@ describe('authController', () => {
               : undefined,
           },
         },
+        { provide: UsersService, useValue: mockUsersService },
+        AdminAccountCheck,
         NativeLoginFence,
       ],
     }).compile()
@@ -148,6 +173,56 @@ describe('authController', () => {
       const mockReq = { cookies: {} } as any
 
       expect(() => controller.check(mockReq)).toThrow(UnauthorizedException)
+    })
+
+    describe('for an OIDC admin session', () => {
+      const mockReq = {
+        cookies: { tegata_token: 'oidc' },
+      } as any
+
+      beforeEach(() => {
+        mockAuthService.verifyToken.mockReturnValue({ role: 'admin', sub: 'alice' })
+      })
+
+      it('should report admin while the user is still Enabled and in the required group', () => {
+        expect(controller.check(mockReq)).toEqual({ authenticated: true, role: 'admin' })
+        expect(mockUsersService.lookupAccount).toHaveBeenCalledWith('alice')
+      })
+
+      it('should return 401 once the user has been Disabled', () => {
+        mockUsersService.lookupAccount.mockReturnValue(aliceLookup({ disabled: true }))
+
+        expect(() => controller.check(mockReq)).toThrow(UnauthorizedException)
+      })
+
+      it('should return 401 once the user has been deleted', () => {
+        mockUsersService.lookupAccount.mockReturnValue({ readable: true, user: null })
+
+        expect(() => controller.check(mockReq)).toThrow(UnauthorizedException)
+      })
+
+      it('should return 401 once the user is no longer in the required group', () => {
+        mockUsersService.lookupAccount.mockReturnValue(aliceLookup({
+          groups: ['users'],
+        }))
+
+        expect(() => controller.check(mockReq)).toThrow(UnauthorizedException)
+      })
+
+      it('should still report admin when the users database is Unreadable', () => {
+        mockUsersService.lookupAccount.mockReturnValue({ readable: false })
+
+        expect(controller.check(mockReq)).toEqual({ authenticated: true, role: 'admin' })
+      })
+    })
+
+    it('should not re-check a native admin session, which carries no sub', () => {
+      mockAuthService.verifyToken.mockReturnValue({ role: 'admin' })
+
+      expect(controller.check({
+        cookies: { tegata_token: 'native' },
+      } as any)).toEqual({ authenticated: true, role: 'admin' })
+      expect(mockUsersService.lookupAccount).not.toHaveBeenCalled()
     })
   })
 

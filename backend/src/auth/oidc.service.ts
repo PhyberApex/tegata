@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as oidc from 'openid-client'
-import { DEFAULT_OIDC_REQUIRED_GROUP } from '../users/guarded-groups'
+import { getRequiredGroup } from '../users/guarded-groups'
 
 @Injectable()
 export class OidcService {
@@ -67,6 +67,6 @@ export class OidcService {
   }
 
   getRequiredGroup(): string {
-    return this.config.get<string>('OIDC_REQUIRED_GROUP', DEFAULT_OIDC_REQUIRED_GROUP)
+    return getRequiredGroup(this.config)
   }
 }
