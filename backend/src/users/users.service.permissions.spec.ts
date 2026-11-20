@@ -1,4 +1,5 @@
-import { chmodSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import type { Mock } from 'vitest'
+import { chmodSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ConfigService } from '@nestjs/config'
@@ -13,6 +14,17 @@ vi.mock('argon2', () => ({
   verify: vi.fn().mockResolvedValue(true),
   argon2id: 2,
 }))
+
+// Real fs throughout; renameSync is wrapped only so a spec can make one rename fail
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>()
+  return {
+    ...actual,
+    renameSync: vi.fn(actual.renameSync),
+  }
+})
+
+const renameSyncMock = renameSync as unknown as Mock
 
 const mode = (path: string) => statSync(path).mode & 0o777
 
@@ -81,5 +93,19 @@ describe('usersService file permissions (real filesystem)', () => {
     await service.createUser('alice', 'Alice', 'alice@test.com', 'password123', ['users'])
 
     expect(mode(file)).toBe(0o640)
+  })
+
+  it('removes the tmp file, leaves the original untouched and rethrows when the rename fails', async () => {
+    const original = 'users: {}\n'
+    writeFileSync(file, original)
+    const exdev = Object.assign(new Error('EXDEV: cross-device link not permitted'), { code: 'EXDEV' })
+    renameSyncMock.mockImplementationOnce(() => { throw exdev })
+
+    await expect(
+      service.createUser('alice', 'Alice', 'alice@test.com', 'password123', ['users']),
+    ).rejects.toBe(exdev)
+
+    expect(readdirSync(dir)).toEqual(['users_database.yml'])
+    expect(readFileSync(file, 'utf-8')).toBe(original)
   })
 })

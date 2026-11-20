@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
-import { chmodSync, existsSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, closeSync, existsSync, fsyncSync, openSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { ConflictException, Injectable, Logger, NotFoundException, OnModuleInit, ServiceUnavailableException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as argon2 from 'argon2'
@@ -203,6 +204,50 @@ export class UsersService implements OnModuleInit {
     return user
   }
 
+  /**
+   * Write-then-rename keeps the swap atomic so Authelia's file watcher never reloads a partial file. The tmp
+   * file is fsynced before the rename — otherwise a crash can leave the users file name pointing at a
+   * zero-length file, with the previous content already replaced — and the directory after it, so the rename
+   * itself survives. A failure before the rename lands removes the tmp file, which holds every password hash.
+   */
+  private replaceFileDurably(content: string): void {
+    const tmpPath = `${this.filePath}.tmp`
+    try {
+      // A stale tmp file from a crash would keep its own mode through the open below
+      rmSync(tmpPath, { force: true })
+      // 0600 at creation so the argon2 hashes are never readable by others, even briefly or on a fresh install
+      const fd = openSync(tmpPath, 'w', 0o600)
+      try {
+        writeFileSync(fd, content, 'utf-8')
+        fsyncSync(fd)
+      }
+      finally {
+        closeSync(fd)
+      }
+      if (existsSync(this.filePath))
+        chmodSync(tmpPath, statSync(this.filePath).mode & 0o777)
+      renameSync(tmpPath, this.filePath)
+    }
+    catch (err) {
+      rmSync(tmpPath, { force: true })
+      throw err
+    }
+
+    // Best effort: not every filesystem or platform can open or fsync a directory
+    try {
+      const dirFd = openSync(dirname(this.filePath), 'r')
+      try {
+        fsyncSync(dirFd)
+      }
+      finally {
+        closeSync(dirFd)
+      }
+    }
+    catch (err) {
+      this.logger.debug(`Could not fsync the users database directory: ${err}`)
+    }
+  }
+
   private writeDatabase(db: UsersDatabase) {
     const header = [
       '# Authelia Users Database',
@@ -212,13 +257,7 @@ export class UsersService implements OnModuleInit {
 
     const content = `${header}\n${yaml.dump(db, { lineWidth: -1, quoteStyle: 'double' })}`
 
-    // Write-then-rename keeps the swap atomic so Authelia's file watcher never reloads a partial file
-    const tmpPath = `${this.filePath}.tmp`
-    // 0600 at creation so the argon2 hashes are never readable by others, even briefly or on a fresh install
-    writeFileSync(tmpPath, content, { encoding: 'utf-8', mode: 0o600 })
-    if (existsSync(this.filePath))
-      chmodSync(tmpPath, statSync(this.filePath).mode & 0o777)
-    renameSync(tmpPath, this.filePath)
+    this.replaceFileDurably(content)
 
     // The YAML write already succeeded and Authelia will pick it up regardless — a failure recording
     // the baseline is a bookkeeping problem, not a reason to report the whole operation as failed.
