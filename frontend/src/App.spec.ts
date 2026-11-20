@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import App from './App.vue'
-import { authenticated, role } from './composables/useAuth'
+import { authenticated, role, username } from './composables/useAuth'
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -34,6 +34,11 @@ async function mountApp() {
       {
         path: '/',
         name: 'users',
+        component: { template: '<div />' },
+      },
+      {
+        path: '/profile',
+        name: 'profile',
         component: { template: '<div />' },
       },
     ],
@@ -82,7 +87,35 @@ afterEach(() => {
   vi.unstubAllGlobals()
   authenticated.value = false
   role.value = null
+  username.value = null
   document.body.innerHTML = ''
+})
+
+function profileLink(wrapper: Awaited<ReturnType<typeof mountApp>>) {
+  return wrapper.findAll('a').find(a => a.text() === 'Profile')
+}
+
+describe('profile link', () => {
+  it.each([
+    ['self', 'bob'],
+    ['admin', 'alice'],
+  ] as const)('renders for a %s session with a username', async (sessionRole, sessionUsername) => {
+    authenticated.value = true
+    role.value = sessionRole
+    username.value = sessionUsername
+    const wrapper = await mountApp()
+
+    expect(profileLink(wrapper)?.attributes('href')).toBe('/profile')
+  })
+
+  it('does not render for a Native Login admin, who has no username', async () => {
+    authenticated.value = true
+    role.value = 'admin'
+    username.value = null
+    const wrapper = await mountApp()
+
+    expect(profileLink(wrapper)).toBeUndefined()
+  })
 })
 
 describe('log level select visibility', () => {

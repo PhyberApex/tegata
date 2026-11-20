@@ -5,11 +5,11 @@ Vue 3 admin panel for Tegata. Most domain vocabulary (User, Group, Invite, Redem
 ## Language
 
 **Admin Session**:
-A logged-in session whose Session Role (see backend CONTEXT.md) is `admin`, held alongside the module-level `authenticated` ref (`useAuth.ts`) and backed by a JWT session cookie. Reaches the full admin UI (`/`, `/invites`, `/groups`, `/bundles`) — native shared-password login (only from inside the Break-Glass Fence — see backend CONTEXT.md) and admin OIDC login both produce one.
+A logged-in session whose Session Role (see backend CONTEXT.md) is `admin`, held alongside the module-level `authenticated` ref (`useAuth.ts`) and backed by a JWT session cookie. Reaches the full admin UI (`/`, `/invites`, `/groups`, `/bundles`) — native shared-password login (only from inside the Break-Glass Fence — see backend CONTEXT.md) and admin OIDC login both produce one. Only an OIDC one has an account (`username` from `GET /api/auth/check`, kept beside `role` in `useAuth.ts`), so only it gets the header's Profile link and `/profile`; `redirectForSession` sends a native one, whose `username` is `null`, from `/profile` to `/`.
 _Avoid_: Login state, auth state
 
 **Self Session**:
-A logged-in session whose Session Role is `self` — same JWT-cookie mechanism as an Admin Session, distinguished only by the `role` claim. Router-guarded to `/profile` only: `router.ts`'s `beforeEach` redirects it away from every admin-only route, and `App.vue`'s nav doesn't render admin links for it. Always the product of OIDC/SSO login by an Authelia user outside the admin group — never available via native shared-password login.
+A logged-in session whose Session Role is `self` — same JWT-cookie mechanism as an Admin Session, distinguished only by the `role` claim. Router-guarded to `/profile` only: `router.ts`'s `beforeEach` redirects it away from every admin-only route (`redirectForSession`), and `App.vue`'s nav renders only the Profile link for it. Always the product of OIDC/SSO login by an Authelia user outside the admin group — never available via native shared-password login.
 
 **Invite Redemption Flow**:
 The public, unauthenticated `/register/:token` view: validates the token (`GET /api/invites/:token/validate`), shows which Groups it grants, and on submit calls the Redemption endpoint. Reachable without an Admin Session — it's the one part of the app invite recipients use directly.

@@ -1,14 +1,44 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import type { OwnProfile } from '@tegata/shared'
+import { onMounted, ref } from 'vue'
 import { useApi } from '../composables/useApi'
 import { passwordMatchError } from '../composables/useRegisterForm'
 
+type ProfileFields = Pick<OwnProfile, 'displayname' | 'email'>
+
 const api = useApi()
 
-const profileForm = ref({ displayname: '', email: '' })
+const username = ref('')
+/** What is on file, as last read or saved; the form sends only what differs from it. */
+const saved = ref<ProfileFields | null>(null)
+const profileForm = ref<ProfileFields>({ displayname: '', email: '' })
 const profileLoading = ref(false)
 const profileError = ref('')
 const profileSuccess = ref(false)
+const profileUnchanged = ref(false)
+
+onMounted(async () => {
+  try {
+    const profile = await api.get<OwnProfile>('/api/profile')
+    username.value = profile.username
+    saved.value = { displayname: profile.displayname, email: profile.email }
+    profileForm.value = { ...saved.value }
+  }
+  catch (err) {
+    profileError.value = err instanceof Error
+      ? err.message
+      : 'Failed to load profile'
+  }
+})
+
+function changedFields(): Partial<ProfileFields> {
+  const changes: Partial<ProfileFields> = {}
+  if (profileForm.value.displayname !== saved.value?.displayname)
+    changes.displayname = profileForm.value.displayname
+  if (profileForm.value.email !== saved.value?.email)
+    changes.email = profileForm.value.email
+  return changes
+}
 
 const passwordForm = ref({ currentPassword: '', newPassword: '', confirmPassword: '' })
 const passwordLoading = ref(false)
@@ -16,14 +46,21 @@ const passwordError = ref('')
 const passwordSuccess = ref(false)
 
 async function handleUpdateProfile() {
-  profileLoading.value = true
   profileError.value = ''
   profileSuccess.value = false
+  profileUnchanged.value = false
+  const changes = changedFields()
+  if (Object.keys(changes).length === 0) {
+    profileUnchanged.value = true
+    return
+  }
+
+  profileLoading.value = true
   try {
-    await api.patch('/api/profile', {
-      displayname: profileForm.value.displayname || undefined,
-      email: profileForm.value.email || undefined,
-    })
+    // The stored values, not the typed ones: the backend trims a displayname.
+    const stored = await api.patch<ProfileFields>('/api/profile', changes)
+    saved.value = { displayname: stored.displayname, email: stored.email }
+    profileForm.value = { ...saved.value }
     profileSuccess.value = true
   }
   catch (err) {
@@ -77,13 +114,23 @@ async function handleChangePassword() {
       </h2>
       <form class="tg-form" @submit.prevent="handleUpdateProfile">
         <div class="tg-form-field">
+          <label for="profile-username" class="tg-form-label">Username</label>
+          <input
+            id="profile-username"
+            :value="username"
+            type="text"
+            class="tg-input"
+            readonly
+          >
+        </div>
+        <div class="tg-form-field">
           <label for="profile-displayname" class="tg-form-label">Display Name</label>
           <input
             id="profile-displayname"
             v-model="profileForm.displayname"
             type="text"
             class="tg-input"
-            placeholder="Leave blank to keep unchanged"
+            required
           >
         </div>
         <div class="tg-form-field">
@@ -93,7 +140,6 @@ async function handleChangePassword() {
             v-model="profileForm.email"
             type="email"
             class="tg-input"
-            placeholder="Leave blank to keep unchanged"
           >
         </div>
         <p v-if="profileError" class="tg-form-error" role="alert">
@@ -102,8 +148,11 @@ async function handleChangePassword() {
         <p v-if="profileSuccess" class="profile-success" role="status">
           Saved.
         </p>
+        <p v-if="profileUnchanged" class="profile-unchanged" role="status">
+          Nothing changed.
+        </p>
         <div class="tg-form-actions">
-          <button type="submit" class="tg-btn tg-btn-primary" :disabled="profileLoading">
+          <button type="submit" class="tg-btn tg-btn-primary" :disabled="profileLoading || !saved">
             {{ profileLoading ? 'Saving...' : 'Save' }}
           </button>
         </div>
@@ -194,6 +243,11 @@ async function handleChangePassword() {
 
 .profile-success {
   color: var(--tg-success);
+  font-size: var(--tg-font-sm);
+  margin: 0;
+}
+.profile-unchanged {
+  color: var(--tg-text-secondary);
   font-size: var(--tg-font-sm);
   margin: 0;
 }

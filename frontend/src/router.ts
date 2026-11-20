@@ -1,6 +1,6 @@
-import type { SessionRole } from './composables/useAuth'
+import type { AuthCheck } from '@tegata/shared'
 import { createRouter, createWebHistory } from 'vue-router'
-import { authenticated, redirectForRole, role } from './composables/useAuth'
+import { forgetSession, redirectForSession, startSession } from './composables/useAuth'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -59,24 +59,22 @@ router.beforeEach(async (to) => {
   if (to.meta.public)
     return true
 
+  let session: AuthCheck
   try {
     const res = await fetch('/api/auth/check')
     if (!res.ok) {
-      authenticated.value = false
-      role.value = null
+      forgetSession()
       return { name: 'login' }
     }
-    const body = await res.json() as { authenticated: boolean, role: SessionRole }
-    authenticated.value = true
-    role.value = body.role
+    session = await res.json() as AuthCheck
+    startSession(session)
   }
   catch {
-    authenticated.value = false
-    role.value = null
+    forgetSession()
     return { name: 'login' }
   }
 
-  return redirectForRole(role.value, to.name) ?? true
+  return redirectForSession(session, to.name) ?? true
 })
 
 export default router

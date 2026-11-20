@@ -1,3 +1,4 @@
+import type { AuthCheck } from '@tegata/shared'
 import type { Request, Response } from 'express'
 import process from 'node:process'
 import { Body, Controller, Get, Logger, Post, Req, Res, UnauthorizedException } from '@nestjs/common'
@@ -74,10 +75,11 @@ export class AuthController {
 
   /**
    * Re-checks an OIDC admin session the same way `AuthGuard` does, so the SPA's router guard sends a
-   * revoked admin to the login page instead of rendering a shell whose every call answers 401.
+   * revoked admin to the login page instead of rendering a shell whose every call answers 401. `username`
+   * is the token's `sub`, `null` for a Native Login session, which has no account to show a profile for.
    */
   @Get('check')
-  check(@Req() req: Request) {
+  check(@Req() req: Request): AuthCheck {
     const token = req.cookies?.tegata_token
     if (!token) {
       throw new UnauthorizedException('Not authenticated')
@@ -85,7 +87,7 @@ export class AuthController {
 
     const payload = this.authService.verifyToken(token)
     this.adminAccountCheck.assertStillAdmin(payload, 'Auth check')
-    return { authenticated: true, role: payload.role }
+    return { authenticated: true, role: payload.role, username: payload.sub ?? null }
   }
 
   @Get('oidc/login')

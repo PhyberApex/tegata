@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { authenticated, role } from './composables/useAuth'
+import { authenticated, role, username } from './composables/useAuth'
 import router from './router'
 
 function jsonResponse(body: unknown, status = 200) {
@@ -13,8 +13,10 @@ function jsonResponse(body: unknown, status = 200) {
 const fetchMock = vi.fn()
 
 // A fresh Response per call: a role redirect runs the guard again, and a body reads once.
-function sessionIs(sessionRole: 'admin' | 'self') {
-  fetchMock.mockImplementation(() => Promise.resolve(jsonResponse({ authenticated: true, role: sessionRole })))
+function sessionIs(sessionRole: 'admin' | 'self', sessionUsername: string | null = sessionRole === 'self'
+  ? 'bob'
+  : 'alice') {
+  fetchMock.mockImplementation(() => Promise.resolve(jsonResponse({ authenticated: true, role: sessionRole, username: sessionUsername })))
 }
 
 async function navigate(path: string) {
@@ -28,6 +30,7 @@ beforeEach(async () => {
   await router.push('/login')
   authenticated.value = true
   role.value = 'admin'
+  username.value = 'alice'
 })
 
 afterEach(() => {
@@ -54,6 +57,24 @@ describe('router guard', () => {
     expect(route.name).toBe('groups')
     expect(authenticated.value).toBe(true)
     expect(role.value).toBe('admin')
+    expect(username.value).toBe('alice')
+  })
+
+  it('lets an OIDC admin session onto its profile', async () => {
+    sessionIs('admin', 'alice')
+
+    const route = await navigate('/profile')
+
+    expect(route.name).toBe('profile')
+  })
+
+  it('sends an admin session with no username (Native Login) from the profile to /', async () => {
+    sessionIs('admin', null)
+
+    const route = await navigate('/profile')
+
+    expect(route.name).toBe('users')
+    expect(username.value).toBeNull()
   })
 
   it('sends a self session from an admin route to its profile', async () => {
@@ -84,6 +105,7 @@ describe('router guard', () => {
     expect(route.name).toBe('login')
     expect(authenticated.value).toBe(false)
     expect(role.value).toBeNull()
+    expect(username.value).toBeNull()
   })
 
   it('sends the session to login when the backend cannot be reached', async () => {
@@ -94,5 +116,6 @@ describe('router guard', () => {
     expect(route.name).toBe('login')
     expect(authenticated.value).toBe(false)
     expect(role.value).toBeNull()
+    expect(username.value).toBeNull()
   })
 })

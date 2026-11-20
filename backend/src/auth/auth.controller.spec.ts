@@ -157,7 +157,7 @@ describe('authController', () => {
         cookies: { tegata_token: 'valid' },
       } as any
 
-      expect(controller.check(mockReq)).toEqual({ authenticated: true, role: 'admin' })
+      expect(controller.check(mockReq)).toEqual({ authenticated: true, role: 'admin', username: null })
     })
 
     it('should report a self role for a self-session token', () => {
@@ -166,7 +166,7 @@ describe('authController', () => {
         cookies: { tegata_token: 'valid' },
       } as any
 
-      expect(controller.check(mockReq)).toEqual({ authenticated: true, role: 'self' })
+      expect(controller.check(mockReq)).toEqual({ authenticated: true, role: 'self', username: 'bob' })
     })
 
     it('should throw UnauthorizedException when no token cookie exists', () => {
@@ -185,7 +185,7 @@ describe('authController', () => {
       })
 
       it('should report admin while the user is still Enabled and in the required group', () => {
-        expect(controller.check(mockReq)).toEqual({ authenticated: true, role: 'admin' })
+        expect(controller.check(mockReq)).toEqual({ authenticated: true, role: 'admin', username: 'alice' })
         expect(mockUsersService.lookupAccount).toHaveBeenCalledWith('alice')
       })
 
@@ -212,7 +212,7 @@ describe('authController', () => {
       it('should still report admin when the users database is Unreadable', () => {
         mockUsersService.lookupAccount.mockReturnValue({ readable: false })
 
-        expect(controller.check(mockReq)).toEqual({ authenticated: true, role: 'admin' })
+        expect(controller.check(mockReq)).toEqual({ authenticated: true, role: 'admin', username: 'alice' })
       })
     })
 
@@ -221,7 +221,7 @@ describe('authController', () => {
 
       expect(controller.check({
         cookies: { tegata_token: 'native' },
-      } as any)).toEqual({ authenticated: true, role: 'admin' })
+      } as any)).toEqual({ authenticated: true, role: 'admin', username: null })
       expect(mockUsersService.lookupAccount).not.toHaveBeenCalled()
     })
   })
