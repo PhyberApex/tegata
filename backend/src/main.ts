@@ -42,6 +42,11 @@ async function bootstrap() {
     exclude: ['/', '/metrics'],
   })
 
+  // The image runs Node as PID 1, which the kernel gives no default signal action: without a
+  // handler, `docker stop`'s SIGTERM is ignored until the SIGKILL. The hooks close the HTTP server
+  // and run onModuleDestroy (which closes SQLite and checkpoints its WAL) before exiting.
+  app.enableShutdownHooks()
+
   await app.listen(port, host)
 }
 bootstrap()
