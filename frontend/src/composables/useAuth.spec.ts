@@ -10,11 +10,11 @@ describe('redirectForRole', () => {
     'groups',
     'bundles',
   ])('redirects a self session away from %s to /profile', (routeName) => {
-    expect(redirectForRole('self', routeName)).toBe('/profile')
+    expect(redirectForRole('self', 'bob', routeName)).toBe('/profile')
   })
 
   it('does not redirect a self session already on /profile', () => {
-    expect(redirectForRole('self', 'profile')).toBeNull()
+    expect(redirectForRole('self', 'bob', 'profile')).toBeNull()
   })
 
   it.each([
@@ -25,8 +25,21 @@ describe('redirectForRole', () => {
     'profile',
     undefined,
     null,
-  ])('never redirects an admin session (route: %s)', (routeName) => {
-    expect(redirectForRole('admin', routeName)).toBeNull()
+  ])('never redirects an OIDC admin session (route: %s)', (routeName) => {
+    expect(redirectForRole('admin', 'alice', routeName)).toBeNull()
+  })
+
+  it('sends a session with no username (Native Login) from /profile to /', () => {
+    expect(redirectForRole('admin', null, 'profile')).toBe('/')
+  })
+
+  it.each([
+    'users',
+    'invites',
+    'groups',
+    'bundles',
+  ])('lets a session with no username onto %s', (routeName) => {
+    expect(redirectForRole('admin', null, routeName)).toBeNull()
   })
 })
 

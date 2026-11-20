@@ -1,5 +1,5 @@
 import type { Mocked } from 'vitest'
-import { ServiceUnavailableException, UnauthorizedException } from '@nestjs/common'
+import { NotFoundException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common'
 import { Test, TestingModule } from '@nestjs/testing'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProfileGuard, ProfileRequest } from '../auth/profile.guard'
@@ -8,10 +8,11 @@ import { ProfileController } from './profile.controller'
 
 describe('profileController', () => {
   let controller: ProfileController
-  let mockUsersService: Mocked<Pick<UsersService, 'updateUser' | 'verifyPassword' | 'resetPassword'>>
+  let mockUsersService: Mocked<Pick<UsersService, 'getUser' | 'updateUser' | 'verifyPassword' | 'resetPassword'>>
 
   beforeEach(async () => {
     mockUsersService = {
+      getUser: vi.fn(),
       updateUser: vi.fn(),
       verifyPassword: vi.fn(),
       resetPassword: vi.fn(),
@@ -35,6 +36,31 @@ describe('profileController', () => {
   function requestFor(username: string): ProfileRequest {
     return { username } as ProfileRequest
   }
+
+  describe('get', () => {
+    it('should return the session user\'s username, displayname and email, and not their groups', () => {
+      mockUsersService.getUser.mockReturnValue({
+        username: 'alice',
+        displayname: 'Alice A',
+        email: 'alice@example.com',
+        groups: ['admins'],
+        disabled: false,
+      })
+
+      expect(controller.get(requestFor('alice'))).toEqual({
+        username: 'alice',
+        displayname: 'Alice A',
+        email: 'alice@example.com',
+      })
+      expect(mockUsersService.getUser).toHaveBeenCalledWith('alice')
+    })
+
+    it('should answer 404 when the user vanished between the guard and the read', () => {
+      mockUsersService.getUser.mockReturnValue(null)
+
+      expect(() => controller.get(requestFor('alice'))).toThrow(NotFoundException)
+    })
+  })
 
   describe('update', () => {
     it('should call updateUser with the session username and only the DTO fields', () => {

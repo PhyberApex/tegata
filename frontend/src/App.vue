@@ -7,13 +7,15 @@ import { useDatabaseIntegrity } from './composables/useDatabaseIntegrity'
 import { useLogLevel } from './composables/useLogLevel'
 
 const route = useRoute()
-const { authenticated, role, logout } = useAuth()
+const { authenticated, role, username, logout } = useAuth()
 const { current: logLevel, levels: logLevels, setLevel, load: loadLogLevel } = useLogLevel()
 const { startPolling, stopPolling } = useDatabaseIntegrity()
 
 const isPublicRoute = computed(() => route.meta.public === true)
 const showNav = computed(() => authenticated.value && !isPublicRoute.value)
 const showAdminNav = computed(() => showNav.value && role.value === 'admin')
+// Any session with an account has a profile; a Native Login admin has none, so no link to a page that 401s.
+const showProfileLink = computed(() => showNav.value && username.value !== null)
 
 watch(showAdminNav, (isAdmin) => {
   if (isAdmin) {
@@ -63,6 +65,9 @@ function onLogLevelChange(e: Event) {
             {{ level }}
           </option>
         </select>
+        <RouterLink v-if="showProfileLink" to="/profile" class="nav-link" active-class="nav-link--active">
+          Profile
+        </RouterLink>
         <button class="tg-btn tg-btn-ghost" @click="logout">
           Logout
         </button>

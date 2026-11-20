@@ -1,5 +1,5 @@
 import router from '../router'
-import { authenticated, role } from './useAuth'
+import { authenticated, role, username } from './useAuth'
 
 export class ApiError extends Error {
   constructor(message: string, public status: number, public body: Record<string, unknown>) {
@@ -18,6 +18,7 @@ const CREDENTIAL_OR_TOKEN_URL = /^\/api\/(?:auth\/|invites\/[^/]+\/(?:validate|r
 function endSession() {
   authenticated.value = false
   role.value = null
+  username.value = null
   router.push({ name: 'login' })
 }
 

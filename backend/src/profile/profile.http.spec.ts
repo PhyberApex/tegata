@@ -5,6 +5,7 @@ import { ConflictException, ValidationPipe } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Test } from '@nestjs/testing'
 import cookieParser from 'cookie-parser'
+import { sign } from 'jsonwebtoken'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthService } from '../auth/auth.service'
 import { NativeLoginFence } from '../auth/native-login-fence'
@@ -22,9 +23,17 @@ describe('profile over HTTP', () => {
   let app: INestApplication
   let baseUrl: string
   let token: string
+  let nativeToken: string
   const users: Record<string, { disabled: boolean }> = {}
-  const usersService: Mocked<Pick<UsersService, 'isEnabledUser' | 'updateUser' | 'verifyPassword' | 'resetPassword'>> = {
+  const usersService: Mocked<Pick<UsersService, 'isEnabledUser' | 'getUser' | 'updateUser' | 'verifyPassword' | 'resetPassword'>> = {
     isEnabledUser: vi.fn((username: string) => Boolean(users[username]) && !users[username].disabled),
+    getUser: vi.fn((username: string) => ({
+      username,
+      displayname: 'Bob',
+      email: 'bob@example.com',
+      groups: ['users'],
+      disabled: false,
+    })),
     updateUser: vi.fn(),
     verifyPassword: vi.fn(async () => true),
     resetPassword: vi.fn(async () => undefined),
@@ -59,6 +68,8 @@ describe('profile over HTTP', () => {
     await app.listen(0, '127.0.0.1')
     baseUrl = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}/api`
     token = moduleRef.get(AuthService).loginWithOidc('bob', false)
+    // A Native Login session: what `AuthService.login` signs, without going through the Break-Glass Fence.
+    nativeToken = sign({ role: 'admin' }, 'spec-secret', { expiresIn: '1h' })
   })
 
   beforeEach(() => {
@@ -70,12 +81,18 @@ describe('profile over HTTP', () => {
     await app.close()
   })
 
-  function send(method: string, path: string, body: object) {
+  function send(method: string, path: string, body?: object, session = token) {
     return fetch(`${baseUrl}${path}`, {
       method,
-      headers: { 'Content-Type': 'application/json', 'Cookie': `tegata_token=${token}` },
-      body: JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json', 'Cookie': `tegata_token=${session}` },
+      body: body === undefined
+        ? undefined
+        : JSON.stringify(body),
     })
+  }
+
+  function getProfile(session = token) {
+    return send('GET', '/profile', undefined, session)
   }
 
   function patchProfile() {
@@ -91,6 +108,19 @@ describe('profile over HTTP', () => {
     expect((await changePassword()).status).toBe(201)
     expect(usersService.updateUser).toHaveBeenCalledWith('bob', { email: 'bob@example.com' })
     expect(usersService.resetPassword).toHaveBeenCalledWith('bob', 'new-password')
+  })
+
+  it('should return the caller\'s username, displayname and email, and not their groups', async () => {
+    const res = await getProfile()
+
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ username: 'bob', displayname: 'Bob', email: 'bob@example.com' })
+    expect(usersService.getUser).toHaveBeenCalledWith('bob')
+  })
+
+  it('should answer 401 to a Native Login session, which has no sub, and read nothing', async () => {
+    expect((await getProfile(nativeToken)).status).toBe(401)
+    expect(usersService.getUser).not.toHaveBeenCalled()
   })
 
   it('should answer 409 without naming the other account when the email is already on another user', async () => {
@@ -117,8 +147,10 @@ describe('profile over HTTP', () => {
   it('should answer 401 to a Disabled user\'s still-valid session and change nothing', async () => {
     users.bob.disabled = true
 
+    expect((await getProfile()).status).toBe(401)
     expect((await patchProfile()).status).toBe(401)
     expect((await changePassword()).status).toBe(401)
+    expect(usersService.getUser).not.toHaveBeenCalled()
     expect(usersService.updateUser).not.toHaveBeenCalled()
     expect(usersService.verifyPassword).not.toHaveBeenCalled()
     expect(usersService.resetPassword).not.toHaveBeenCalled()

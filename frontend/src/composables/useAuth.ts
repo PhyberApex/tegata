@@ -6,6 +6,10 @@ export type SessionRole = 'admin' | 'self'
 
 export const authenticated = ref(false)
 export const role = ref<SessionRole | null>(null)
+/** The account this session acts as; `null` for a Native Login session, which has none. */
+export const username = ref<string | null>(null)
+
+export interface AuthCheck { authenticated: boolean, role: SessionRole, username: string | null }
 
 const ADMIN_ONLY_ROUTE_NAMES = new Set([
   'users',
@@ -14,9 +18,21 @@ const ADMIN_ONLY_ROUTE_NAMES = new Set([
   'bundles',
 ])
 
-export function redirectForRole(sessionRole: SessionRole, routeName: string | symbol | null | undefined): string | null {
-  if (sessionRole === 'self' && typeof routeName === 'string' && ADMIN_ONLY_ROUTE_NAMES.has(routeName))
+/**
+ * Where a session may not go: a self session is held to its profile, and a session with no account (a
+ * Native Login admin) is kept off the profile, whose every call would answer 401 for it.
+ */
+export function redirectForRole(
+  sessionRole: SessionRole,
+  sessionUsername: string | null,
+  routeName: string | symbol | null | undefined,
+): string | null {
+  if (typeof routeName !== 'string')
+    return null
+  if (sessionRole === 'self' && ADMIN_ONLY_ROUTE_NAMES.has(routeName))
     return '/profile'
+  if (sessionUsername === null && routeName === 'profile')
+    return '/'
   return null
 }
 
@@ -26,13 +42,15 @@ export function useAuth() {
 
   async function checkAuth() {
     try {
-      const res = await api.get<{ authenticated: boolean, role: SessionRole }>('/api/auth/check')
+      const res = await api.get<AuthCheck>('/api/auth/check')
       authenticated.value = true
       role.value = res.role
+      username.value = res.username ?? null
     }
     catch {
       authenticated.value = false
       role.value = null
+      username.value = null
       router.push('/login')
     }
   }
@@ -41,6 +59,7 @@ export function useAuth() {
     await api.post('/api/auth/login', { password })
     authenticated.value = true
     role.value = 'admin'
+    username.value = null
     router.push('/')
   }
 
@@ -53,12 +72,14 @@ export function useAuth() {
     catch {}
     authenticated.value = false
     role.value = null
+    username.value = null
     router.push('/login')
   }
 
   return {
     authenticated,
     role,
+    username,
     checkAuth,
     login,
     logout,

@@ -1,4 +1,4 @@
-import { Body, Controller, Patch, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, NotFoundException, Patch, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common'
 import { Throttle } from '@nestjs/throttler'
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
 import { ProfileGuard, ProfileRequest } from '../auth/profile.guard'
@@ -28,6 +28,18 @@ class ChangePasswordDto {
 @UseGuards(ProfileGuard)
 export class ProfileController {
   constructor(private usersService: UsersService) {}
+
+  /**
+   * The caller's own record, narrowed to what the profile form shows — never `groups`, so self-service
+   * reads no more than it can write.
+   */
+  @Get()
+  get(@Req() req: ProfileRequest) {
+    const user = this.usersService.getUser(req.username)
+    if (!user)
+      throw new NotFoundException('User not found')
+    return { username: user.username, displayname: user.displayname, email: user.email }
+  }
 
   @Patch()
   update(@Req() req: ProfileRequest, @Body() dto: UpdateProfileDto) {

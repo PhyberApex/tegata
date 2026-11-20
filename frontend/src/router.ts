@@ -1,6 +1,6 @@
-import type { SessionRole } from './composables/useAuth'
+import type { AuthCheck } from './composables/useAuth'
 import { createRouter, createWebHistory } from 'vue-router'
-import { authenticated, redirectForRole, role } from './composables/useAuth'
+import { authenticated, redirectForRole, role, username } from './composables/useAuth'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -64,19 +64,22 @@ router.beforeEach(async (to) => {
     if (!res.ok) {
       authenticated.value = false
       role.value = null
+      username.value = null
       return { name: 'login' }
     }
-    const body = await res.json() as { authenticated: boolean, role: SessionRole }
+    const body = await res.json() as AuthCheck
     authenticated.value = true
     role.value = body.role
+    username.value = body.username ?? null
   }
   catch {
     authenticated.value = false
     role.value = null
+    username.value = null
     return { name: 'login' }
   }
 
-  return redirectForRole(role.value, to.name) ?? true
+  return redirectForRole(role.value, username.value, to.name) ?? true
 })
 
 export default router
