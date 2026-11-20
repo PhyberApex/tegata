@@ -28,6 +28,13 @@ function lookupUser(users: Record<string, AutheliaUser>, username: string): Auth
     : undefined
 }
 
+/** The form two emails are compared in. Tolerates a hand-edited record whose `email` is missing or not a string. */
+function normalizeEmail(email: unknown): string {
+  return typeof email === 'string'
+    ? email.trim().toLowerCase()
+    : ''
+}
+
 /**
  * The Unreadable Users Database state (CONTEXT.md): a missing file only counts as "start empty" before any
  * Baseline Hash has ever been recorded (fresh install). Once a row exists, a missing file is unreadable just
@@ -170,6 +177,23 @@ export class UsersService implements OnModuleInit {
   private assertUsernameFree(db: UsersDatabase, username: string): void {
     if (lookupUser(db.users, username))
       throw new ConflictException(`User "${username}" already exists`)
+  }
+
+  /**
+   * Authelia's file backend refuses a users file where two users share an email once email search is on, and
+   * Email Delivery of a Reset Token resolves the address from the record — so an email may be on one user
+   * only. Compared trimmed and case-insensitively. The message names no account: a `self` session and an
+   * invite redemption reach this too.
+   */
+  private assertEmailFree(db: UsersDatabase, email: string, exceptUsername?: string): void {
+    const wanted = normalizeEmail(email)
+    if (!wanted)
+      return
+    const taken = Object.entries(db.users).some(([username, user]) =>
+      username !== exceptUsername && normalizeEmail(user.email) === wanted,
+    )
+    if (taken)
+      throw new ConflictException('That email address is already in use')
   }
 
   private findUserOrThrow(db: UsersDatabase, username: string): AutheliaUser {
@@ -447,9 +471,11 @@ export class UsersService implements OnModuleInit {
     password: string,
     groups: string[],
   ) {
-    // Refused before the hash so a taken username costs no argon2 run; re-checked under the mutation below,
-    // since another create may have taken it while this one was hashing.
-    this.assertUsernameFree(this.readDatabaseOrThrow(), username)
+    // Refused before the hash so a taken username or email costs no argon2 run; re-checked under the mutation
+    // below, since another create may have taken either while this one was hashing.
+    const current = this.readDatabaseOrThrow()
+    this.assertUsernameFree(current, username)
+    this.assertEmailFree(current, email)
 
     for (const group of groups)
       this.groupsService.ensureGroup(group)
@@ -458,6 +484,7 @@ export class UsersService implements OnModuleInit {
 
     this.mutateDatabase((db) => {
       this.assertUsernameFree(db, username)
+      this.assertEmailFree(db, email)
       // defineProperty, not assignment: `db.users['__proto__'] = …` would swap the prototype instead.
       Object.defineProperty(db.users, username, {
         value: {
@@ -523,6 +550,9 @@ export class UsersService implements OnModuleInit {
   ) {
     const user = this.mutateDatabase((db) => {
       const user = this.findUserOrThrow(db, username)
+      // Only a changed address is checked, so a duplicate already on file never blocks an unrelated edit.
+      if (updates.email !== undefined && normalizeEmail(updates.email) !== normalizeEmail(user.email))
+        this.assertEmailFree(db, updates.email, username)
       this.assertUpdateGuard(db, username, user, updates, confirm)
 
       if (updates.groups !== undefined) {

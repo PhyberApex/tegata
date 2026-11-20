@@ -5,7 +5,7 @@ NestJS service managing Authelia SSO identities: users, groups, and invite-based
 ## Language
 
 **Authelia Users Database**:
-The YAML file (`authelia-users.yml`) Authelia itself reads to authenticate users. Tegata is its sole writer — no other process edits it — and treats it as a database, not a config file: every user create/update/delete/password-reset round-trips through it. Authelia watches the file (`watch: true`) and reloads it whenever it changes, so writes take effect immediately; Tegata swaps the file in atomically so the watcher never observes a partial write.
+The YAML file (`authelia-users.yml`) Authelia itself reads to authenticate users. Tegata is its sole writer — no other process edits it — and treats it as a database, not a config file: every user create/update/delete/password-reset round-trips through it. Authelia watches the file (`watch: true`) and reloads it whenever it changes, so writes take effect immediately; Tegata swaps the file in atomically so the watcher never observes a partial write. No two users in it share an email address (compared trimmed and case-insensitively): Authelia's file backend requires that once `search.email` is on, and Email Delivery of a Reset Token resolves the address from the record. Only a new or changed address is checked, so duplicates already on file never block an unrelated edit.
 _Avoid_: Users file, config file
 
 **Disabled**:
@@ -32,7 +32,7 @@ _Avoid_: Group template, group preset, saved group set, live bundle (there is no
 A token (7-day expiry by default) that grants the bearer permission to self-register, pre-assigned to one or more Groups. Lives in SQLite, independent of the Authelia Users Database until redeemed.
 
 **Redemption**:
-The act of exchanging a still-valid, not-yet-used Invite for a new Authelia user account — the invite is marked used (`used_by`/`used_at`) and can never be redeemed again, but it isn't deleted (unlike revocation). The mark is claimed *before* the account is written, so of two concurrent redemptions of one token only one gets past it; if the account write then fails (a taken username, an unreadable database) the mark is released and the invite stays redeemable. A Reset Token's redemption claims `used_at` the same way, except that a token whose user was deleted, or that a newer token superseded, while the password was being hashed is deleted rather than released.
+The act of exchanging a still-valid, not-yet-used Invite for a new Authelia user account — the invite is marked used (`used_by`/`used_at`) and can never be redeemed again, but it isn't deleted (unlike revocation). The mark is claimed *before* the account is written, so of two concurrent redemptions of one token only one gets past it; if the account write then fails (a taken username or email address, an unreadable database) the mark is released and the invite stays redeemable. A Reset Token's redemption claims `used_at` the same way, except that a token whose user was deleted, or that a newer token superseded, while the password was being hashed is deleted rather than released.
 _Avoid_: Registration, signup (those describe the user-facing action; redemption is what happens to the Invite)
 
 **Revocation**:

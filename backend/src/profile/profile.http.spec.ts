@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common'
 import type { AddressInfo } from 'node:net'
 import type { Mocked } from 'vitest'
-import { ValidationPipe } from '@nestjs/common'
+import { ConflictException, ValidationPipe } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Test } from '@nestjs/testing'
 import cookieParser from 'cookie-parser'
@@ -91,6 +91,17 @@ describe('profile over HTTP', () => {
     expect((await changePassword()).status).toBe(201)
     expect(usersService.updateUser).toHaveBeenCalledWith('bob', { email: 'bob@example.com' })
     expect(usersService.resetPassword).toHaveBeenCalledWith('bob', 'new-password')
+  })
+
+  it('should answer 409 without naming the other account when the email is already on another user', async () => {
+    usersService.updateUser.mockImplementationOnce(() => {
+      throw new ConflictException('That email address is already in use')
+    })
+
+    const res = await send('PATCH', '/profile', { email: 'alice@example.com' })
+
+    expect(res.status).toBe(409)
+    expect(((await res.json()) as { message: string }).message).toBe('That email address is already in use')
   })
 
   it.each(['', '   '])('should answer 400 to the blank displayname %j and change nothing', async (displayname) => {
