@@ -4,23 +4,21 @@ import { Injectable, Logger } from '@nestjs/common'
 
 const VERBOSE_PREFIXES = ['/api/health', '/metrics']
 
-// Routes whose path segment is a bearer secret (Invite / Reset Token).
-const SECRET_PATH = /^(\/api\/(?:invites|reset-tokens)\/)[^/]+(\/(?:validate|redeem)\/?)$/i
+// Paths whose segment is a bearer secret (Invite / Reset Token): the API
+// validate/redeem routes, and the SPA pages the emailed links open.
+const SECRET_PATHS = [
+  /(\/(?:invites|reset-tokens)\/)[^/]+(?=\/(?:validate|redeem)(?:\/|$))/gi,
+  /^(\/(?:register|reset)\/)[^/]+/i,
+]
 
-/**
- * Strips secrets from a request URL before it is logged: the token segment
- * of invite/reset-token validate/redeem routes is replaced with `[redacted]`,
- * and any query string (status token, OIDC code/state, …) is reduced to `?…`.
- */
-export function redactUrl(originalUrl: string): string {
-  const q = originalUrl.indexOf('?')
-  const path = q === -1
-    ? originalUrl
-    : originalUrl.slice(0, q)
-  const redacted = path.replace(SECRET_PATH, '$1[redacted]$2')
-  return q === -1
-    ? redacted
-    : `${redacted}?…`
+// Query strings can carry secrets too (STATUS_ENDPOINT_TOKEN, OIDC code/state),
+// so only the path is logged, with `?…` marking that a query was present.
+function redactUrl(originalUrl: string): string {
+  const [path, ...query] = originalUrl.split('?')
+  const redacted = SECRET_PATHS.reduce((p, re) => p.replace(re, '$1[redacted]'), path)
+  return query.length > 0
+    ? `${redacted}?…`
+    : redacted
 }
 
 @Injectable()
