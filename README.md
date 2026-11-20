@@ -266,7 +266,9 @@ Tegata hashes the passwords it writes to the users file with argon2id, by defaul
 
 `GET /api/status` exists for the [gethomepage](https://gethomepage.dev) `customapi` widget. It is
 off (404) until you set `STATUS_ENDPOINT_TOKEN`; then every request needs that token, otherwise it
-is a 401. The response is `{ totalUsers, pendingInvites, authelia: { ageHours, ok } }`. The
+is a 401. The response is `{ totalUsers, pendingInvites, authelia: { ageHours, ok } }`, where
+`ageHours` is the hours since Tegata last wrote the Authelia users file. When that file cannot be
+read, `ok` is `false` and `ageHours` is `null`, so key off `ok` before formatting the age. The
 `customapi` widget can send headers, so prefer the bearer header over `?token=` (query strings end
 up in proxy logs):
 

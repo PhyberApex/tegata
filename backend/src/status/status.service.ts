@@ -37,7 +37,7 @@ export class StatusService {
       return { ageHours: (Date.now() - s.mtimeMs) / 3_600_000, ok: true }
     }
     catch {
-      return { ageHours: Infinity, ok: false }
+      return { ageHours: null, ok: false }
     }
   }
 }
