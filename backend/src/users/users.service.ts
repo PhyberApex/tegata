@@ -47,6 +47,11 @@ export interface UnreadableUsersDatabase { readable: false, kind: UnreadableKind
 
 export type UsersDatabaseReadability = { readable: true } | UnreadableUsersDatabase
 
+export interface PublicUser { username: string, displayname: string, email: string, groups: string[], disabled: boolean }
+
+/** A tolerant lookup's answer: the user (or `null` when there is none), or `readable: false` for an Unreadable Users Database. */
+export type AccountLookup = { readable: true, user: PublicUser | null } | { readable: false }
+
 @Injectable()
 export class UsersService implements OnModuleInit {
   private readonly filePath: string
@@ -377,7 +382,7 @@ export class UsersService implements OnModuleInit {
     })
   }
 
-  private toPublicUser(username: string, user: AutheliaUser): { username: string, displayname: string, email: string, groups: string[], disabled: boolean } {
+  private toPublicUser(username: string, user: AutheliaUser): PublicUser {
     return {
       username,
       displayname: user.displayname,
@@ -387,7 +392,7 @@ export class UsersService implements OnModuleInit {
     }
   }
 
-  listUsers(): Array<{ username: string, displayname: string, email: string, groups: string[], disabled: boolean }> {
+  listUsers(): PublicUser[] {
     const db = this.readDatabase()
     return Object.entries(db.users).map(([username, user]) => this.toPublicUser(username, user))
   }
@@ -410,7 +415,25 @@ export class UsersService implements OnModuleInit {
     return user !== undefined && !user.disabled
   }
 
-  getUser(username: string): { username: string, displayname: string, email: string, groups: string[], disabled: boolean } | null {
+  /**
+   * Like `getUser`, but tells an Unreadable Users Database apart from a missing user instead of reading
+   * it as empty, and without throwing — so the caller decides what "can't tell" means (`AdminAccountCheck`
+   * admits the session rather than locking every OIDC admin out of the repair).
+   */
+  lookupAccount(username: string): AccountLookup {
+    const result = this.readabilityResult()
+    if (!result.readable)
+      return { readable: false }
+    const user = lookupUser(result.db.users, username)
+    return {
+      readable: true,
+      user: user
+        ? this.toPublicUser(username, user)
+        : null,
+    }
+  }
+
+  getUser(username: string): PublicUser | null {
     const user = lookupUser(this.readDatabase().users, username)
     return user
       ? this.toPublicUser(username, user)

@@ -5,6 +5,7 @@ import { APP_GUARD } from '@nestjs/core'
 import { ServeStaticModule } from '@nestjs/serve-static'
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
 import { AccessPreviewModule } from './access-preview/access-preview.module'
+import { AdminAccountCheckModule } from './auth/admin-account-check.module'
 import { AuthModule } from './auth/auth.module'
 import { BundlesModule } from './bundles/bundles.module'
 import { MetricsMiddleware, RequestLoggerMiddleware } from './common'
@@ -34,6 +35,7 @@ import { UsersModule } from './users/users.module'
     AccessPreviewModule,
     DatabaseModule,
     AuthModule,
+    AdminAccountCheckModule,
     GroupsModule,
     GroupsApiModule,
     BundlesModule,

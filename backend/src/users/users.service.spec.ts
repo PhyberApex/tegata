@@ -661,6 +661,40 @@ describe('usersService', () => {
     })
   })
 
+  describe('lookupAccount', () => {
+    it('should return the user it finds', () => {
+      expect(service.lookupAccount('alice')).toEqual({
+        readable: true,
+        user: {
+          username: 'alice',
+          displayname: 'Alice Smith',
+          email: 'alice@example.com',
+          groups: ['admins', 'users'],
+          disabled: false,
+        },
+      })
+    })
+
+    it('should report a Disabled user as disabled', () => {
+      readFileSyncMock.mockReturnValue(USERS_YAML_WITH_DISABLED)
+
+      expect(service.lookupAccount('alice')).toMatchObject({
+        readable: true,
+        user: { disabled: true },
+      })
+    })
+
+    it('should return a null user for an unknown username', () => {
+      expect(service.lookupAccount('ghost')).toEqual({ readable: true, user: null })
+    })
+
+    it('should report an unreadable database instead of throwing or reading it as empty', () => {
+      readFileSyncMock.mockImplementation(() => { throw new Error('permission denied') })
+
+      expect(service.lookupAccount('alice')).toEqual({ readable: false })
+    })
+  })
+
   describe('object.prototype member names as usernames', () => {
     const NAMES = [
       'constructor',
@@ -675,6 +709,7 @@ describe('usersService', () => {
       expect(service.userExists(name)).toBe(false)
       expect(service.isEnabledUser(name)).toBe(false)
       expect(service.getUser(name)).toBeNull()
+      expect(service.lookupAccount(name)).toEqual({ readable: true, user: null })
     })
 
     it.each(NAMES)('should create %s and round-trip it through YAML', async (name) => {

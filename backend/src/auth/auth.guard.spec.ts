@@ -1,18 +1,43 @@
 import type { Mocked } from 'vitest'
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { UsersService } from '../users/users.service'
+import { AdminAccountCheck } from './admin-account-check'
 import { AuthGuard } from './auth.guard'
 import { AuthService } from './auth.service'
 
 describe('authGuard', () => {
   let guard: AuthGuard
   let mockAuthService: Mocked<Pick<AuthService, 'verifyToken'>>
+  let mockUsersService: Mocked<Pick<UsersService, 'lookupAccount'>>
+
+  function buildGuard(config: ConfigService = {
+    get: (_key: string, fallback: string) => fallback,
+  } as unknown as ConfigService) {
+    return new AuthGuard(
+      mockAuthService as unknown as AuthService,
+      new AdminAccountCheck(mockUsersService as unknown as UsersService, config),
+    )
+  }
 
   beforeEach(() => {
     mockAuthService = {
       verifyToken: vi.fn(),
     }
-    guard = new AuthGuard(mockAuthService as unknown as AuthService)
+    mockUsersService = {
+      lookupAccount: vi.fn().mockReturnValue({
+        readable: true,
+        user: {
+          username: 'alice',
+          displayname: 'Alice',
+          email: '',
+          groups: ['tegata'],
+          disabled: false,
+        },
+      }),
+    }
+    guard = buildGuard()
   })
 
   function createContext(cookies: Record<string, string> = {}): ExecutionContext {
@@ -65,5 +90,88 @@ describe('authGuard', () => {
     expect(() => guard.canActivate(createContext({ tegata_token: 'bad' }))).toThrow(
       UnauthorizedException,
     )
+  })
+
+  describe('re-checking an OIDC admin session against the users database', () => {
+    beforeEach(() => {
+      mockAuthService.verifyToken.mockReturnValue({ role: 'admin', sub: 'alice' })
+    })
+
+    it('should admit an admin who is still Enabled and in the required group', () => {
+      expect(guard.canActivate(createContext({ tegata_token: 'oidc' }))).toBe(true)
+      expect(mockUsersService.lookupAccount).toHaveBeenCalledWith('alice')
+    })
+
+    it('should refuse an admin who has since been Disabled', () => {
+      mockUsersService.lookupAccount.mockReturnValue({
+        readable: true,
+        user: {
+          username: 'alice',
+          displayname: 'Alice',
+          email: '',
+          groups: ['tegata'],
+          disabled: true,
+        },
+      })
+
+      expect(() => guard.canActivate(createContext({ tegata_token: 'oidc' }))).toThrow(UnauthorizedException)
+    })
+
+    it('should refuse an admin who has since been deleted', () => {
+      mockUsersService.lookupAccount.mockReturnValue({ readable: true, user: null })
+
+      expect(() => guard.canActivate(createContext({ tegata_token: 'oidc' }))).toThrow(UnauthorizedException)
+    })
+
+    it('should refuse an admin who is no longer in the required group', () => {
+      mockUsersService.lookupAccount.mockReturnValue({
+        readable: true,
+        user: {
+          username: 'alice',
+          displayname: 'Alice',
+          email: '',
+          groups: ['users'],
+          disabled: false,
+        },
+      })
+
+      expect(() => guard.canActivate(createContext({ tegata_token: 'oidc' }))).toThrow(UnauthorizedException)
+    })
+
+    it('should read the required group from OIDC_REQUIRED_GROUP', () => {
+      guard = buildGuard({
+        get: (key: string, fallback: string) => key === 'OIDC_REQUIRED_GROUP'
+          ? 'admins'
+          : fallback,
+      } as unknown as ConfigService)
+
+      expect(() => guard.canActivate(createContext({ tegata_token: 'oidc' }))).toThrow(UnauthorizedException)
+
+      mockUsersService.lookupAccount.mockReturnValue({
+        readable: true,
+        user: {
+          username: 'alice',
+          displayname: 'Alice',
+          email: '',
+          groups: ['admins'],
+          disabled: false,
+        },
+      })
+      expect(guard.canActivate(createContext({ tegata_token: 'oidc' }))).toBe(true)
+    })
+
+    it('should admit the session when the users database is Unreadable', () => {
+      mockUsersService.lookupAccount.mockReturnValue({ readable: false })
+
+      expect(guard.canActivate(createContext({ tegata_token: 'oidc' }))).toBe(true)
+    })
+
+    it('should always admit a native session, which carries no sub, without reading the users database', () => {
+      mockAuthService.verifyToken.mockReturnValue({ role: 'admin' })
+      mockUsersService.lookupAccount.mockReturnValue({ readable: true, user: null })
+
+      expect(guard.canActivate(createContext({ tegata_token: 'native' }))).toBe(true)
+      expect(mockUsersService.lookupAccount).not.toHaveBeenCalled()
+    })
   })
 })
