@@ -35,17 +35,17 @@ function lookupUser(users: Record<string, AutheliaUser>, username: string): Auth
  */
 type DatabaseReadResult
   = | { readable: true, db: UsersDatabase }
-    | { readable: false, kind: UnreadableKind, reason: string }
+    | UnreadableUsersDatabase
 
 /**
- * Why the Users Database is unreadable, as a content-free category — `reason` carries the detail
+ * Why the Authelia Users Database is unreadable, as a content-free category — `reason` carries the detail
  * (file paths, parser snippets of the file's own lines) and must not leave the process unauthenticated.
  */
 export type UnreadableKind = 'read-error' | 'missing' | 'invalid-yaml' | 'no-users-mapping'
 
-export type UsersDatabaseReadability
-  = | { readable: true }
-    | { readable: false, kind: UnreadableKind, reason: string }
+export interface UnreadableUsersDatabase { readable: false, kind: UnreadableKind, reason: string }
+
+export type UsersDatabaseReadability = { readable: true } | UnreadableUsersDatabase
 
 @Injectable()
 export class UsersService implements OnModuleInit {
@@ -287,9 +287,9 @@ export class UsersService implements OnModuleInit {
    */
   getReadability(): UsersDatabaseReadability {
     const result = this.checkReadability()
-    if (result.readable)
-      return { readable: true }
-    return { readable: false, kind: result.kind, reason: result.reason }
+    return result.readable
+      ? { readable: true }
+      : result
   }
 
   getDatabaseIntegrityStatus(): { matches: boolean, unreadable: boolean, unreadableReason: string | null } {

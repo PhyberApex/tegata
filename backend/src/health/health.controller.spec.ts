@@ -22,7 +22,7 @@ const mockReadFileSync = vi.mocked(readFileSync)
 
 const USERS_FILE = '/authelia-config/users_database.yml'
 
-function enoent(): never {
+function throwEnoent(): never {
   const err = new Error(`ENOENT: no such file or directory, open '${USERS_FILE}'`) as NodeJS.ErrnoException
   err.code = 'ENOENT'
   throw err
@@ -87,7 +87,7 @@ describe('healthController', () => {
     controller = module.get(HealthController)
     dbService = module.get(DatabaseService) as Mocked<DatabaseService>
 
-    mockReadFileSync.mockImplementation(enoent)
+    mockReadFileSync.mockImplementation(throwEnoent)
     warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {})
   })
 
