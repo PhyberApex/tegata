@@ -18,9 +18,10 @@
 # which shows the database was closed rather than cut off.
 #
 # Usage: scripts/boot-check.sh <start-command> <health-url>
-#   BOOT_TIMEOUT_S       seconds to wait for the health probe to go green (default 30)
-#   BOOT_POLL_S          seconds between probe attempts (default 1)
-#   BOOT_STOP_TIMEOUT_S  seconds to wait for a clean exit after SIGTERM (default 5)
+#   <start-command> must be a single command: it is exec'd, so SIGTERM reaches it directly
+#   BOOT_TIMEOUT_S       whole seconds to wait for the health probe to go green (default 30)
+#   BOOT_POLL_S          whole seconds between probe attempts (default 1)
+#   BOOT_STOP_TIMEOUT_S  whole seconds to wait for a clean exit after SIGTERM (default 5)
 
 start_cmd=$1
 health_url=$2
@@ -39,6 +40,8 @@ else
   exit 2
 fi
 
+alive() { kill -0 "$pid" 2>/dev/null; }
+
 timeout=${BOOT_TIMEOUT_S:-30}
 poll=${BOOT_POLL_S:-1}
 stop_timeout=${BOOT_STOP_TIMEOUT_S:-5}
@@ -51,7 +54,7 @@ pid=$!
 waited=0
 status=1
 while [ "$waited" -lt "$timeout" ]; do
-  if ! kill -0 "$pid" 2>/dev/null; then
+  if ! alive; then
     echo "$start_cmd exited before the health check passed" >&2
     break
   fi
@@ -64,18 +67,18 @@ while [ "$waited" -lt "$timeout" ]; do
 done
 
 if [ "$status" -ne 0 ]; then
-  if kill -0 "$pid" 2>/dev/null; then
+  if alive; then
     echo "$health_url did not become healthy within ${timeout}s" >&2
   fi
 else
   kill -TERM "$pid" 2>/dev/null
   # Poll in tenths, so a prompt exit is not rounded up to a whole poll interval
   ticks=0
-  while kill -0 "$pid" 2>/dev/null && [ "$ticks" -lt $((stop_timeout * 10)) ]; do
+  while alive && [ "$ticks" -lt $((stop_timeout * 10)) ]; do
     sleep 0.1
     ticks=$((ticks + 1))
   done
-  if kill -0 "$pid" 2>/dev/null; then
+  if alive; then
     echo "$start_cmd did not exit within ${stop_timeout}s of SIGTERM" >&2
     status=1
   else
