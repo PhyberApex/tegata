@@ -238,7 +238,9 @@ open — it is open on purpose.
 | `NATIVE_LOGIN_CIDRS` | no | `10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.0/8` | IPv4 or IPv6 CIDRs (e.g. `fd00::/8`) the password login answers from; `::1` is always admitted; a malformed entry refuses to boot |
 | `PUBLIC_URL` | when `SMTP_HOST` is set, otherwise derived/unused | derived from the origin of `OIDC_REDIRECT_URI` | what the links in outgoing emails start with; must be an absolute `http(s)` URL. Boot fails if `SMTP_HOST` is set and neither this nor `OIDC_REDIRECT_URI` is |
 | `SMTP_HOST` | for email | — | unset disables email delivery entirely |
-| `SMTP_PORT` | no | `587` | |
+| `SMTP_PORT` | no | `587` | integer 1-65535; anything else refuses to boot |
+| `SMTP_SECURE` | no | `true` on port `465`, otherwise `false` | `true` uses implicit TLS (TLS from the first byte); `false` connects in plaintext and upgrades with STARTTLS |
+| `SMTP_REQUIRE_TLS` | no | `true` when `SMTP_USERNAME` is set, otherwise `false` | when `SMTP_SECURE` is `false`, refuse to send unless STARTTLS succeeds. Set `false` only for a trusted local relay without TLS |
 | `SMTP_USERNAME` / `SMTP_PASSWORD` | no | — | both or neither |
 | `SMTP_SENDER` | no | `Tegata <noreply@example.com>` | the From header |
 | `SITE_NAME` | no | `Tegata` | the name shown in invite and reset emails, the login, register and reset pages, and the browser tab |

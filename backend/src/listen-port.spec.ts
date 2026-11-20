@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseListenPort } from './listen-port'
+import { parseListenPort, parsePort } from './listen-port'
 
 describe('parseListenPort', () => {
   it('parses a valid port', () => {
@@ -22,5 +22,12 @@ describe('parseListenPort', () => {
     '70000',
   ])('rejects %s', (raw) => {
     expect(() => parseListenPort(raw)).toThrow(/^PORT: /)
+  })
+})
+
+describe('parsePort', () => {
+  it('uses the given fallback and names the given variable', () => {
+    expect(parsePort('SMTP_PORT', undefined, 587)).toBe(587)
+    expect(() => parsePort('SMTP_PORT', 'abc', 587)).toThrow(/^SMTP_PORT: /)
   })
 })

@@ -275,4 +275,106 @@ describe('mailService', () => {
       }))
     })
   })
+
+  describe('transport security', () => {
+    const base = { SMTP_HOST: 'smtp.example.com', PUBLIC_URL: 'https://tegata.example.com' }
+    const creds = { SMTP_USERNAME: 'user', SMTP_PASSWORD: 'pass' }
+
+    function transportOptions() {
+      return nodemailerMock.createTransport.mock.calls[0][0] as Record<string, unknown>
+    }
+
+    it('should default to port 587 without implicit TLS', async () => {
+      await buildService(base)
+
+      expect(transportOptions()).toMatchObject({ port: 587, secure: false })
+    })
+
+    it('should use implicit TLS on port 465', async () => {
+      await buildService({ ...base, SMTP_PORT: '465' })
+
+      expect(transportOptions()).toMatchObject({ port: 465, secure: true })
+    })
+
+    it('should let SMTP_SECURE override the port-based default', async () => {
+      await buildService({ ...base, SMTP_PORT: '465', SMTP_SECURE: 'false' })
+      expect(transportOptions()).toMatchObject({ port: 465, secure: false })
+
+      nodemailerMock.createTransport.mockClear()
+      await buildService({ ...base, SMTP_PORT: '2465', SMTP_SECURE: 'true' })
+      expect(transportOptions()).toMatchObject({ port: 2465, secure: true })
+    })
+
+    it('should require STARTTLS before sending credentials on a non-TLS port', async () => {
+      await buildService({
+        ...base,
+        ...creds,
+        SMTP_PORT: '587',
+      })
+
+      expect(transportOptions()).toMatchObject({ secure: false, requireTLS: true })
+    })
+
+    it('should not require STARTTLS when SMTP_REQUIRE_TLS=false', async () => {
+      await buildService({
+        ...base,
+        ...creds,
+        SMTP_PORT: '587',
+        SMTP_REQUIRE_TLS: 'false',
+      })
+
+      expect(transportOptions()).toMatchObject({ secure: false, requireTLS: false })
+    })
+
+    it('should keep STARTTLS opportunistic for an unauthenticated relay', async () => {
+      await buildService({ ...base, SMTP_PORT: '25' })
+
+      expect(transportOptions()).toMatchObject({ secure: false, requireTLS: false })
+    })
+
+    it('should not ask for STARTTLS on an implicit-TLS connection', async () => {
+      await buildService({
+        ...base,
+        ...creds,
+        SMTP_PORT: '465',
+      })
+
+      expect(transportOptions()).toMatchObject({ secure: true, requireTLS: false })
+    })
+
+    it.each([
+      'abc',
+      '0',
+      '65536',
+      '58.7',
+      '-1',
+      '0x1d',
+    ])('should refuse to boot on SMTP_PORT=%j', async (port) => {
+      await expect(buildService({ ...base, SMTP_PORT: port })).rejects.toThrow(/SMTP_PORT/)
+    })
+
+    it.each(['SMTP_SECURE', 'SMTP_REQUIRE_TLS'])('should refuse to boot on a non-boolean %s', async (name) => {
+      await expect(buildService({
+        ...base,
+        ...creds,
+        [name]: 'yes',
+      })).rejects.toThrow(new RegExp(name))
+    })
+
+    it('should refuse to boot on a non-boolean SMTP_REQUIRE_TLS even with implicit TLS', async () => {
+      await expect(buildService({ ...base, SMTP_PORT: '465', SMTP_REQUIRE_TLS: 'yes' })).rejects.toThrow(/SMTP_REQUIRE_TLS/)
+    })
+
+    it('should treat a blank SMTP_PORT as unset', async () => {
+      await buildService({ ...base, SMTP_PORT: '  ' })
+
+      expect(transportOptions()).toMatchObject({ port: 587 })
+    })
+
+    it('should accept booleans case-insensitively with surrounding whitespace', async () => {
+      await buildService({ ...base, SMTP_PORT: '2465', SMTP_SECURE: ' TRUE ' })
+
+      expect(transportOptions()).toMatchObject({ secure: true })
+    })
+  })
 })

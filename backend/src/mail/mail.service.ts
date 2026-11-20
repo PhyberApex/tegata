@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as nodemailer from 'nodemailer'
+import { parseBoolean } from '../config/parse-boolean'
+import { parsePort } from '../listen-port'
 
 export type MailResult = { sentAt: string } | { error: string }
 
@@ -17,6 +19,9 @@ interface ResetEmailInput {
   displayname: string | null
   token: string
 }
+
+const DEFAULT_SMTP_PORT = 587
+const IMPLICIT_TLS_PORT = 465
 
 @Injectable()
 export class MailService {
@@ -47,9 +52,18 @@ export class MailService {
       return
     }
 
+    const port = parsePort('SMTP_PORT', this.config.get<string>('SMTP_PORT'), DEFAULT_SMTP_PORT)
+    const secure = parseBoolean('SMTP_SECURE', this.config.get<string>('SMTP_SECURE'), port === IMPLICIT_TLS_PORT)
+    // Without implicit TLS, refuse to send credentials unless STARTTLS succeeds. An unauthenticated
+    // relay keeps opportunistic STARTTLS; SMTP_REQUIRE_TLS=false opts out for a trusted local relay.
+    const requireTLS = parseBoolean('SMTP_REQUIRE_TLS', this.config.get<string>('SMTP_REQUIRE_TLS'), Boolean(username))
+      && !secure
+
     this.transporter = nodemailer.createTransport({
       host,
-      port: Number(this.config.get<string>('SMTP_PORT', '587')),
+      port,
+      secure,
+      requireTLS,
       auth: username
         ? { user: username, pass: password }
         : undefined,
