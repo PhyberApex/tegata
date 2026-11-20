@@ -1,5 +1,40 @@
 # Changelog
 
+## [2.1.0](https://github.com/PhyberApex/tegata/compare/v2.0.2...v2.1.0) (2026-11-20)
+
+
+### Features
+
+* **auth:** refuse to boot on a weak JWT secret or unparseable admin password hash ([#124](https://github.com/PhyberApex/tegata/issues/124)) ([95625db](https://github.com/PhyberApex/tegata/commit/95625db7950bea0b11cf82ec695ab7a24d5db1e4))
+
+
+### Bug Fixes
+
+* **auth:** re-check OIDC admin sessions against the users database on every request ([#125](https://github.com/PhyberApex/tegata/issues/125)) ([1c8a777](https://github.com/PhyberApex/tegata/commit/1c8a7772e6cbf0b8ea39b917fcbb12320fc88af1))
+* **backend:** enable shutdown hooks so SIGTERM stops the container cleanly and closes SQLite ([#130](https://github.com/PhyberApex/tegata/issues/130)) ([56ab3b5](https://github.com/PhyberApex/tegata/commit/56ab3b50bc3699ef1a2d8916c958aa6de63fdf84))
+* **backend:** redact tokens and query strings from request logs ([#123](https://github.com/PhyberApex/tegata/issues/123)) ([2038aba](https://github.com/PhyberApex/tegata/commit/2038aba97cb78af0b63c607aaf1d9e66aaee86a7))
+* **deps:** update dependency @nestjs/cli to v12.0.13 ([#94](https://github.com/PhyberApex/tegata/issues/94)) ([ba26b64](https://github.com/PhyberApex/tegata/commit/ba26b64874a2e216248500190b183aa5604ad92a))
+* **deps:** update dependency @nestjs/throttler to v6.8.0 ([#103](https://github.com/PhyberApex/tegata/issues/103)) ([5c92f33](https://github.com/PhyberApex/tegata/commit/5c92f335f12a4616e34969b594104effd2e7d684))
+* **deps:** update dependency @vue/test-utils to v2.6.0 ([#101](https://github.com/PhyberApex/tegata/issues/101)) ([43cde48](https://github.com/PhyberApex/tegata/commit/43cde489d1e3c62a014dd709e41111dcc503b652))
+* **deps:** update dependency better-sqlite3 to v13.2.0 ([#99](https://github.com/PhyberApex/tegata/issues/99)) ([fe86d05](https://github.com/PhyberApex/tegata/commit/fe86d05bba7acfdb63345e38c76a49ef854fa342))
+* **deps:** update dependency eslint to v10.15.0 ([#97](https://github.com/PhyberApex/tegata/issues/97)) ([8574d6c](https://github.com/PhyberApex/tegata/commit/8574d6c9254a4b0ee0ed20a3440d47dc478b4e72))
+* **deps:** update dependency nodemailer to v10.6.0 ([#102](https://github.com/PhyberApex/tegata/issues/102)) ([624ceae](https://github.com/PhyberApex/tegata/commit/624ceaeaedda299d4b95f2a8ec903b72115f326d))
+* **deps:** update dependency openid-client to v6.9.0 ([#98](https://github.com/PhyberApex/tegata/issues/98)) ([fc82ea4](https://github.com/PhyberApex/tegata/commit/fc82ea4f3ad430bbd7f1c658d94c5339a7ab47ed))
+* **deps:** update dependency vue-router to v5.5.1 ([#95](https://github.com/PhyberApex/tegata/issues/95)) ([c1a6a3f](https://github.com/PhyberApex/tegata/commit/c1a6a3fee99ffaa1c6644de5b34337c31e195ea9))
+* **deps:** update docker/dockerfile:1 docker digest to 572cebb ([#106](https://github.com/PhyberApex/tegata/issues/106)) ([23df30f](https://github.com/PhyberApex/tegata/commit/23df30f5c9fb2dc730cc11594eb00e033f0e7f18))
+* **deps:** update nest monorepo to v12.5.1 ([#104](https://github.com/PhyberApex/tegata/issues/104)) ([e8fd786](https://github.com/PhyberApex/tegata/commit/e8fd786e937d9617352265388f6b6d0053b4ed3b))
+* **deps:** update pnpm to v12.21.0 ([#100](https://github.com/PhyberApex/tegata/issues/100)) ([2f7303a](https://github.com/PhyberApex/tegata/commit/2f7303a0b3c04eb2aae19bf8cf714d6e8800b0df))
+* **docker:** default the image to NODE_ENV=production and warn at boot when cookies lack Secure ([#131](https://github.com/PhyberApex/tegata/issues/131)) ([d90f90a](https://github.com/PhyberApex/tegata/commit/d90f90a0c476f3b25e3abed04ca929dc157b73f9))
+* **frontend:** clear the page-level error banner when a new load or action starts ([#134](https://github.com/PhyberApex/tegata/issues/134)) ([0a226b2](https://github.com/PhyberApex/tegata/commit/0a226b23941b92294ae319085a197f7ac684ce1e))
+* **frontend:** make ModalOverlay an accessible modal dialog with focus management and Escape-to-close ([#135](https://github.com/PhyberApex/tegata/issues/135)) ([6573722](https://github.com/PhyberApex/tegata/commit/6573722c409c9114b4cc85bbfcbc6ba6373c1a8b))
+* **health:** stop leaking users database content and report the Unreadable Users Database state ([#122](https://github.com/PhyberApex/tegata/issues/122)) ([b48df85](https://github.com/PhyberApex/tegata/commit/b48df85afb40e70950d7af658c49700a9045a7aa))
+* **mail:** support implicit TLS on port 465 and require STARTTLS before sending credentials ([#128](https://github.com/PhyberApex/tegata/issues/128)) ([59f1ba8](https://github.com/PhyberApex/tegata/commit/59f1ba846ff74f424efa66dcfb877bfa979b6797))
+* **profile:** reject a blank displayname and trim it on PATCH /api/profile ([#126](https://github.com/PhyberApex/tegata/issues/126)) ([9d173fb](https://github.com/PhyberApex/tegata/commit/9d173fbe3e2f89e669ed0d6eea90bce14850edb8)), closes [#111](https://github.com/PhyberApex/tegata/issues/111)
+* **profile:** show the account on file, keep native admins off the profile, and link it from the header ([#136](https://github.com/PhyberApex/tegata/issues/136)) ([c091c4f](https://github.com/PhyberApex/tegata/commit/c091c4f4e2bcf6da3329903f3cf449af2fbbdd57))
+* **status:** send authelia.ageHours as null, not Infinity, when the users database cannot be read ([#133](https://github.com/PhyberApex/tegata/issues/133)) ([208e334](https://github.com/PhyberApex/tegata/commit/208e33473c708c87c0f78f216ddc487605e4d04b))
+* **users:** enforce unique email addresses across users ([#127](https://github.com/PhyberApex/tegata/issues/127)) ([fb48ebe](https://github.com/PhyberApex/tegata/commit/fb48ebe4965f0fb51969bec7bf53ad0f6d144d14)), closes [#112](https://github.com/PhyberApex/tegata/issues/112)
+* **users:** fsync the Authelia Users Database before the rename and remove the tmp file on failure ([#129](https://github.com/PhyberApex/tegata/issues/129)) ([b56c4fd](https://github.com/PhyberApex/tegata/commit/b56c4fd2ee3172786db9861d60acfbeef8b187b8))
+
 ## [2.0.2](https://github.com/PhyberApex/tegata/compare/v2.0.1...v2.0.2) (2026-11-16)
 
 
