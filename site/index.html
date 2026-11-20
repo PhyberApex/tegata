@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0e17" />
+    <meta name="color-scheme" content="dark" />
+    <title>Tegata — an admin UI for Authelia's file user backend</title>
+    <meta
+      name="description"
+      content="Tegata writes Authelia's users_database.yml for you: users, groups, invites and reset links, with an out-of-band edit check and a guard against locking every admin out."
+    />
+    <link rel="canonical" href="https://phyberapex.github.io/tegata/" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Tegata — an admin UI for Authelia's file user backend" />
+    <meta
+      property="og:description"
+      content="Users, groups, invites and reset links for Authelia's file backend, with an out-of-band edit check and a lockout guard."
+    />
+    <meta property="og:url" content="https://phyberapex.github.io/tegata/" />
+    <meta property="og:image" content="https://phyberapex.github.io/tegata/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="wrap site-header-inner">
+        <a class="brand" href="#top" aria-label="Tegata home">
+          <span class="brand-logo" lang="ja" aria-hidden="true">手形</span>
+          <span class="brand-name">Tegata</span>
+        </a>
+        <nav class="site-nav" aria-label="Sections">
+          <a href="#honest">Safeguards</a>
+          <a href="#everyday">Features</a>
+          <a href="#trust">Trust model</a>
+          <a href="#run">Run it</a>
+        </nav>
+        <a class="tg-btn tg-btn-ghost site-header-repo" href="https://github.com/PhyberApex/tegata">
+          GitHub
+        </a>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top">
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <h1>Authelia's users file, without the hand&#8209;editing.</h1>
+            <p class="hero-lede">
+              Authelia's file backend is a YAML file you edit by hand, with argon2 hashes you
+              generate on the command line. Tegata is the admin UI for it: it writes
+              <code>users_database.yml</code> for you, hands out invite and reset links, and
+              refuses the one write that would lock every admin out of SSO.
+            </p>
+            <div class="hero-actions">
+              <a class="tg-btn tg-btn-primary cta" href="#run">Run it with Docker</a>
+              <a class="tg-btn tg-btn-ghost cta" href="https://github.com/PhyberApex/tegata">
+                Read the source
+              </a>
+            </div>
+            <p class="hero-facts">
+              MIT licensed · <span class="nowrap">linux/amd64 and linux/arm64</span> ·
+              <a href="https://github.com/PhyberApex/tegata/releases/latest">
+                latest release <span data-version-prefixed>v2.0.2</span>
+              </a>
+            </p>
+          </div>
+
+          <div class="seal" aria-hidden="true">
+            <span lang="ja">手形</span>
+          </div>
+        </div>
+
+        <div class="wrap">
+          <figure class="app-shot">
+            <div
+              class="app-window"
+              role="img"
+              aria-label="The Tegata Users page: a table of four users with their groups and per-user actions."
+            >
+              <div class="app-header">
+                <div class="app-brand">
+                  <span class="app-logo" lang="ja">手形</span>
+                  <span class="app-title">Tegata</span>
+                </div>
+                <div class="app-nav">
+                  <span class="app-nav-link app-nav-link--active">Users</span>
+                  <span class="app-nav-link">Invites</span>
+                  <span class="app-nav-link">Groups</span>
+                  <span class="app-nav-link">Bundles</span>
+                </div>
+                <div class="app-actions">
+                  <span class="tg-btn tg-btn-ghost">Logout</span>
+                </div>
+              </div>
+              <div class="app-main">
+                <div class="app-page-head">
+                  <span class="app-page-title">Users</span>
+                  <span class="tg-btn tg-btn-primary">Create User</span>
+                </div>
+                <div class="tg-table-wrap">
+                  <table class="tg-table">
+                    <thead>
+                      <tr>
+                        <th>Username</th>
+                        <th class="col-name">Display Name</th>
+                        <th class="col-email">Email</th>
+                        <th>Groups</th>
+                        <th class="col-actions">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="cell-username">mika</td>
+                        <td class="col-name">Mika Sato</td>
+                        <td class="col-email">mika@example.com</td>
+                        <td>
+                          <span class="badges">
+                            <span class="tg-badge">admins</span>
+                            <span class="tg-badge">tegata</span>
+                          </span>
+                        </td>
+                        <td class="col-actions">
+                          <span class="tg-table-actions">
+                            <span class="tg-btn tg-btn-ghost">Edit</span>
+                            <span class="tg-btn tg-btn-ghost">Reset Link</span>
+                            <span class="tg-btn tg-btn-ghost">Disable</span>
+                            <span class="tg-btn tg-btn-danger">Delete</span>
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="cell-username">jonas</td>
+                        <td class="col-name">Jonas Weber</td>
+                        <td class="col-email">jonas@example.com</td>
+                        <td>
+                          <span class="badges">
+                            <span class="tg-badge">family</span>
+                            <span class="tg-badge">media</span>
+                          </span>
+                        </td>
+                        <td class="col-actions">
+                          <span class="tg-table-actions">
+                            <span class="tg-btn tg-btn-ghost">Edit</span>
+                            <span class="tg-btn tg-btn-ghost">Reset Link ●</span>
+                            <span class="tg-btn tg-btn-ghost">Disable</span>
+                            <span class="tg-btn tg-btn-danger">Delete</span>
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="cell-username">
+                          ines <span class="tg-badge tg-badge-danger">Disabled</span>
+                        </td>
+                        <td class="col-name">Ines Okafor</td>
+                        <td class="col-email">ines@example.com</td>
+                        <td>
+                          <span class="badges">
+                            <span class="tg-badge">family</span>
+                          </span>
+                        </td>
+                        <td class="col-actions">
+                          <span class="tg-table-actions">
+                            <span class="tg-btn tg-btn-ghost">Edit</span>
+                            <span class="tg-btn tg-btn-ghost">Reset Link</span>
+                            <span class="tg-btn tg-btn-ghost">Enable</span>
+                            <span class="tg-btn tg-btn-danger">Delete</span>
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td class="cell-username">theo</td>
+                        <td class="col-name">Theo Lindqvist</td>
+                        <td class="col-email">theo@example.com</td>
+                        <td>
+                          <span class="badges">
+                            <span class="tg-badge">admins</span>
+                            <span class="tg-badge">tegata</span>
+                            <span class="tg-badge">media</span>
+                          </span>
+                        </td>
+                        <td class="col-actions">
+                          <span class="tg-table-actions">
+                            <span class="tg-btn tg-btn-ghost">Edit</span>
+                            <span class="tg-btn tg-btn-ghost">Reset Link</span>
+                            <span class="tg-btn tg-btn-ghost">Disable</span>
+                            <span class="tg-btn tg-btn-danger">Delete</span>
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <figcaption>
+              The Users page, drawn with the app's own styles and sample data. Every change
+              round-trips through <code>users_database.yml</code> with an atomic swap, so
+              Authelia's file watcher never sees a half-written file.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="section" id="honest">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>Honest about a file it does not fully own</h2>
+            <p>
+              Authelia reads the users file. You, your editor and your backups can all still
+              touch it. Tegata is built around that instead of pretending to be the only writer.
+            </p>
+          </div>
+
+          <div class="guard">
+            <div class="guard-copy">
+              <h3>It notices edits made behind its back</h3>
+              <p>
+                The users file is hashed after every write. An edit by anything else shows a
+                banner until an admin accepts the new baseline. It never blocks you — it only
+                makes sure you know.
+              </p>
+            </div>
+            <div class="guard-visual" aria-hidden="true">
+              <div class="panel">
+                <div class="file-name">users_database.yml</div>
+                <pre class="file-body"><span class="ln">users:</span><span class="ln">  jonas:</span><span class="ln">    displayname: Jonas Weber</span><span class="ln ln--changed">    groups: [family, media, admins]</span><span class="ln">    disabled: false</span></pre>
+                <div class="integrity-banner">
+                  <span>The users database was modified outside Tegata.</span>
+                  <span class="tg-btn tg-btn-ghost integrity-banner-action">Accept current state</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="guard guard--flip">
+            <div class="guard-copy">
+              <h3>It shows what a group is actually granted</h3>
+              <p>
+                The Access Preview parses Authelia's <code>configuration.yml</code> — the
+                <code>{group}</code> domain placeholder, <code>group:</code> subject rules and
+                OIDC authorization policies — and summarises each group's reach, read-only.
+                It also flags oddities, such as a policy no client references.
+              </p>
+            </div>
+            <div class="guard-visual" aria-hidden="true">
+              <div class="panel panel--pad">
+                <div class="panel-title">
+                  Effective access <span class="tg-badge">family</span>
+                </div>
+                <div class="tg-access-section-title">Domains</div>
+                <ul class="tg-access-list">
+                  <li class="tg-access-item">
+                    <span class="tg-access-item-name">family.example.com</span>
+                    <span class="tg-access-item-policy">one_factor</span>
+                  </li>
+                  <li class="tg-access-item">
+                    <span class="tg-access-item-name">photos.example.com</span>
+                    <span class="tg-access-item-policy">two_factor</span>
+                  </li>
+                </ul>
+                <div class="tg-access-section-title">Apps (OIDC)</div>
+                <ul class="tg-access-list">
+                  <li class="tg-access-item">
+                    <span class="tg-access-item-name">Jellyfin</span>
+                    <span class="tg-access-item-policy">one_factor</span>
+                  </li>
+                  <li class="tg-access-item">
+                    <span class="tg-access-item-name">Paperless</span>
+                    <span class="tg-access-item-policy">two_factor</span>
+                  </li>
+                </ul>
+                <div class="tg-access-section-title">Notes</div>
+                <ul class="tg-access-list">
+                  <li class="tg-access-note">Policy "legacy" is not referenced by any OIDC client.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="guard">
+            <div class="guard-copy">
+              <h3>It refuses to lock you out</h3>
+              <p>
+                The Enabled-Count Guard stops a delete, disable or group change that would
+                leave fewer than two enabled users, or empty a guarded group of its last
+                enabled member. You can still go ahead — after you have confirmed you meant it.
+              </p>
+            </div>
+            <div class="guard-visual" aria-hidden="true">
+              <div class="panel panel--pad panel--modal">
+                <div class="panel-title">Confirm Action</div>
+                <p class="tg-form-hint">
+                  This would leave no enabled members in <strong>admins</strong>. Proceed anyway?
+                </p>
+                <div class="tg-form-actions">
+                  <span class="tg-btn tg-btn-ghost">Cancel</span>
+                  <span class="tg-btn tg-btn-danger">Confirm</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--raised" id="everyday">
+        <div class="wrap">
+          <div class="section-head">
+            <h2>The everyday work, without a terminal</h2>
+            <p>What you would otherwise do with a text editor and a hash generator.</p>
+          </div>
+
+          <dl class="ledger">
+            <div class="ledger-row">
+              <dt>Users</dt>
+              <dd>
+                Create, edit, delete, disable and re-enable. Reset passwords, hashed with
+                argon2id.
+              </dd>
+            </div>
+            <div class="ledger-row">
+              <dt>Groups</dt>
+              <dd>
+                Created in the UI, or seeded at startup from whatever groups existing users
+                already carry. Deleting a group strips it from every user, invite and bundle
+                that still names it, after a confirmation.
+              </dd>
+            </div>
+            <div class="ledger-row">
+              <dt>Group bundles</dt>
+              <dd>
+                Named sets of groups — “Family member” — that expand into a plain group list
+                when you create an invite or a user.
+              </dd>
+            </div>
+            <div class="ledger-row">
+              <dt>Invites</dt>
+              <dd>
+                Expiring, single-use self-registration links, seven days by default. Optionally
+                pre-filled, optionally emailed. The recipient picks their own username and
+                password.
+              </dd>
+            </div>
+            <div class="ledger-row">
+              <dt>Reset tokens</dt>
+              <dd>
+                A one-day link that lets one existing user set a new password. One outstanding
+                token per user.
+              </dd>
+            </div>
+            <div class="ledger-row">
+              <dt>Email delivery</dt>
+              <dd>
+                Invite and reset links go out over SMTP when configured — best-effort, never
+                blocking the create. The copy-link and QR-code paths are always there.
+              </dd>
+            </div>
+            <div class="ledger-row">
+              <dt>Self-service</dt>
+              <dd>
+                Anyone who signs in without the admin group gets a profile page for their own
+                display name, email and password, and nothing more.
+              </dd>
+            </div>
+            <div class="ledger-row">
+              <dt>Observability</dt>
+              <dd>
+                Prometheus metrics on <code>/metrics</code>, a runtime log-level switch, and
+                <code>/api/health</code>.
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="section" id="trust">
+        <div class="wrap trust-grid">
+          <div class="trust-copy">
+            <h2>Built to keep working when Authelia is down</h2>
+            <p>
+              Repairing Authelia's users file is what Tegata is for, so it cannot depend on
+              Authelia to let you in. It does its own authentication and sits behind your
+              reverse proxy with TLS, with nothing else in front.
+            </p>
+            <ul class="trust-list">
+              <li>
+                <strong>OIDC is the everyday door.</strong> Anyone can log in with Authelia.
+                Members of one group get the admin UI; everyone else gets self-service.
+              </li>
+              <li>
+                <strong>The password login is break-glass.</strong> One shared password,
+                answered only from the networks you name and refused everywhere else before
+                the password is even looked at.
+              </li>
+              <li>
+                <strong>The container is boxed in.</strong> It runs as root because Authelia
+                keeps the users file root-owned — so the example drops every capability,
+                forbids privilege escalation and mounts the root filesystem read-only.
+              </li>
+              <li>
+                <strong>It never writes Authelia's main configuration.</strong>
+                <code>configuration.yml</code> is read for the Access Preview and nothing else.
+              </li>
+            </ul>
+            <p>
+              <a href="https://github.com/PhyberApex/tegata#trust-model--read-this-first">
+                Read the full trust model
+              </a>
+            </p>
+          </div>
+
+          <div class="fence" aria-hidden="true">
+            <div class="fence-title">Password login, by source address</div>
+            <div class="fence-row">
+              <span class="fence-ip">192.168.1.24</span>
+              <span class="fence-verdict fence-verdict--in">form shown</span>
+            </div>
+            <div class="fence-row">
+              <span class="fence-ip">10.8.0.3 <span class="fence-note">VPN client</span></span>
+              <span class="fence-verdict fence-verdict--in">form shown</span>
+            </div>
+            <div class="fence-row">
+              <span class="fence-ip">203.0.113.9</span>
+              <span class="fence-verdict fence-verdict--out">refused, password unread</span>
+            </div>
+            <div class="fence-foot">
+              <code>NATIVE_LOGIN_CIDRS</code> defaults to the private IPv4 ranges plus loopback.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--raised" id="run">
+        <div class="wrap run-grid">
+          <div class="run-copy">
+            <h2>Run it next to Authelia</h2>
+            <p>
+              Two volumes are the whole integration: read-write access to the directory
+              Authelia mounts its configuration from, and a place for Tegata's own SQLite file.
+            </p>
+            <ol class="run-steps">
+              <li>
+                Generate the break-glass password hash with Authelia itself and put it in
+                <code>.env</code> alongside a session secret.
+              </li>
+              <li>
+                Register Tegata as an OIDC client in Authelia, and make sure Authelia is
+                watching the users file.
+              </li>
+              <li>Start the container behind your reverse proxy.</li>
+            </ol>
+            <div class="run-links">
+              <a href="https://github.com/PhyberApex/tegata#running-it">Setup guide</a>
+              <a href="https://github.com/PhyberApex/tegata#environment-variables">Environment variables</a>
+              <a href="https://github.com/PhyberApex/tegata/blob/main/docker-compose.yml">Full compose example with Traefik</a>
+            </div>
+          </div>
+
+          <div class="code">
+            <div class="code-head">
+              <span class="file-name">docker-compose.yml</span>
+              <button class="tg-btn tg-btn-ghost code-copy" type="button" data-copy-target="compose">
+                Copy
+              </button>
+            </div>
+            <pre class="code-body" tabindex="0"><code id="compose"><span class="k">services</span>:
+  <span class="k">tegata</span>:
+    <span class="k">image</span>: ghcr.io/phyberapex/tegata:<span data-version>2.0.2</span>
+    <span class="k">env_file</span>: .env
+    <span class="k">environment</span>:
+      - NODE_ENV=production
+      - TEGATA_DB_PATH=/data/tegata.db
+      - AUTHELIA_USERS_FILE=/authelia-config/users_database.yml
+      - AUTHELIA_CONFIG_FILE=/authelia-config/configuration.yml
+    <span class="k">volumes</span>:
+      - tegata-data:/data
+      - ./authelia/config:/authelia-config
+    <span class="k">read_only</span>: true
+    <span class="k">tmpfs</span>: [/tmp]
+    <span class="k">cap_drop</span>: [ALL]
+    <span class="k">security_opt</span>: [no-new-privileges:true]
+    <span class="k">restart</span>: unless-stopped
+
+<span class="k">volumes</span>:
+  <span class="k">tegata-data</span>:</code></pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap site-footer-inner">
+        <div class="brand">
+          <span class="brand-logo" lang="ja" aria-hidden="true">手形</span>
+          <span class="brand-name">Tegata</span>
+        </div>
+        <p class="site-footer-note">
+          <span lang="ja">手形</span> — handprint, a personal mark. MIT licensed. Not affiliated
+          with the Authelia project. Developed with heavy use of AI coding tools, with a human
+          maintainer reviewing before anything is merged.
+        </p>
+        <nav class="site-footer-links" aria-label="Project links">
+          <a href="https://github.com/PhyberApex/tegata">GitHub</a>
+          <a href="https://github.com/PhyberApex/tegata/releases">Releases</a>
+          <a href="https://github.com/PhyberApex/tegata/pkgs/container/tegata">Container image</a>
+          <a href="https://github.com/PhyberApex/tegata/blob/main/CONTRIBUTING.md">Contributing</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script src="site.js" defer></script>
+  </body>
+</html>
