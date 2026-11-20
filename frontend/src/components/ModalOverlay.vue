@@ -1,17 +1,93 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref, useId } from 'vue'
+
 defineProps<{ title: string }>()
-defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: [] }>()
+
+const titleId = useId()
+const dialogEl = ref<HTMLElement>()
+
+// Elements a keyboard user can Tab to; disabled and tabindex="-1" ones are skipped.
+const FOCUSABLE = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ')
+
+function focusables(): HTMLElement[] {
+  return dialogEl.value
+    ? [
+        ...dialogEl.value.querySelectorAll<HTMLElement>(FOCUSABLE),
+      ]
+    : []
+}
+
+let opener: HTMLElement | null = null
+
+onMounted(() => {
+  opener = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : null
+  const dialog = dialogEl.value
+  if (!dialog || dialog.contains(document.activeElement))
+    return
+  const first = focusables()[0]
+  ;(first ?? dialog).focus()
+})
+
+onBeforeUnmount(() => {
+  if (opener?.isConnected)
+    opener.focus()
+})
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    emit('close')
+    return
+  }
+  if (event.key !== 'Tab')
+    return
+  const items = focusables()
+  if (items.length === 0) {
+    event.preventDefault()
+    return
+  }
+  const first = items[0]
+  const last = items[items.length - 1]
+  const active = document.activeElement
+  const outside = !items.includes(active as HTMLElement)
+  if (event.shiftKey && (active === first || outside)) {
+    event.preventDefault()
+    last.focus()
+  }
+  else if (!event.shiftKey && (active === last || outside)) {
+    event.preventDefault()
+    first.focus()
+  }
+}
 </script>
 
 <template>
   <Teleport to="body">
-    <div class="overlay" @click.self="$emit('close')">
-      <div class="modal tg-card" role="dialog" :aria-label="title">
+    <div class="overlay" @click.self="emit('close')">
+      <div
+        ref="dialogEl"
+        class="modal tg-card"
+        role="dialog"
+        aria-modal="true"
+        :aria-labelledby="titleId"
+        tabindex="-1"
+        @keydown="onKeydown"
+      >
         <div class="modal-header">
-          <h2 class="modal-title">
+          <h2 :id="titleId" class="modal-title">
             {{ title }}
           </h2>
-          <button class="tg-btn tg-btn-ghost modal-close" aria-label="Close" @click="$emit('close')">
+          <button class="tg-btn tg-btn-ghost modal-close" aria-label="Close" @click="emit('close')">
             &times;
           </button>
         </div>
@@ -37,6 +113,7 @@ defineEmits<{ close: [] }>()
 
 .modal {
   width: 100%;
+  outline: none;
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;

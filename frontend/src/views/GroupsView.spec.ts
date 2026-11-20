@@ -143,14 +143,22 @@ describe('groupsView config notes section', () => {
   })
 })
 
-function findDialog(label: string): HTMLElement {
-  const dialog = [
-    ...document.body.querySelectorAll('[role="dialog"]'),
+// A dialog's accessible name comes from the title its aria-labelledby points at.
+function queryDialog(label: string): HTMLElement | undefined {
+  return [
+    ...document.body.querySelectorAll<HTMLElement>('[role="dialog"]'),
   ]
-    .find(el => el.getAttribute('aria-label') === label)
+    .find((el) => {
+      const labelId = el.getAttribute('aria-labelledby')
+      return labelId !== null && document.getElementById(labelId)?.textContent?.trim() === label
+    })
+}
+
+function findDialog(label: string): HTMLElement {
+  const dialog = queryDialog(label)
   if (!dialog)
-    throw new Error(`No dialog found with aria-label "${label}"`)
-  return dialog as HTMLElement
+    throw new Error(`No dialog found labelled "${label}"`)
+  return dialog
 }
 
 function findButton(root: HTMLElement, text: string): DOMWrapper<HTMLButtonElement> {
@@ -464,7 +472,7 @@ describe('groupsView delete', () => {
       undefined,
       { confirm: true },
     ])
-    expect(document.body.querySelector('[aria-label="Delete Group"]')).toBeNull()
+    expect(queryDialog('Delete Group')).toBeUndefined()
   })
 
   it('names a Guarded Group the delete would empty', async () => {
