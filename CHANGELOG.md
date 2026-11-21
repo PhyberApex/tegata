@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/PhyberApex/tegata/compare/v2.1.0...v2.1.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* **deps:** update vitest monorepo to v5.1.1 ([#137](https://github.com/PhyberApex/tegata/issues/137)) ([db20ad9](https://github.com/PhyberApex/tegata/commit/db20ad96f9b51f5e26502f9b751b7bdbdcda988f))
+
 ## [2.1.0](https://github.com/PhyberApex/tegata/compare/v2.0.2...v2.1.0) (2026-11-20)
 
 

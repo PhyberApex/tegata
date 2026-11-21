@@ -4,7 +4,7 @@
 # on Traefik's network. Keep TRUST_PROXY=1 (one hop: Traefik).
 services:
   tegata:
-    image: ghcr.io/phyberapex/tegata:2.1.0 # x-release-please-version
+    image: ghcr.io/phyberapex/tegata:2.1.1 # x-release-please-version
     labels:
       - traefik.enable=true
       - traefik.http.routers.tegata.rule=Host(`tegata.example.com`)
