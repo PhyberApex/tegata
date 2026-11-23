@@ -8,7 +8,8 @@ Bug reports, ideas and pull requests are welcome.
 - Fork, branch, and submit a pull request.
 - `pnpm install`, then `pnpm dev` runs the backend, the frontend with HMR and a watch
   on the shared package. `pnpm test`, `pnpm typecheck`, `pnpm lint` and `pnpm build` are
-  what CI runs, plus `pnpm boot-check` against the built backend and a `docker build`.
+  what CI runs, plus `pnpm boot-check` against the built backend, a `docker build`, and a boot of the
+  built image until its `HEALTHCHECK` reports healthy.
 - The domain vocabulary — Authelia Users Database, Enabled-Count Guard, Out-of-Band Edit,
   Break-Glass Fence and the rest — is defined in `backend/CONTEXT.md` and
   `frontend/CONTEXT.md`. Use those words in code, comments and issues; add a term there

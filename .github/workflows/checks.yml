@@ -52,3 +52,45 @@ jobs:
       # The image must default to production, which is what gives cookies the Secure flag
       - name: Image defaults to NODE_ENV=production
         run: test "$(docker run --rm tegata:ci node -p process.env.NODE_ENV)" = production
+      # The boot check above runs in the workspace, on glibc with devDependencies
+      # installed; this one starts the image that gets published: the
+      # `pnpm deploy --prod` tree, the musl-built native modules, the frontend
+      # path and the image's own HEALTHCHECK, under the hardening the example
+      # compose file applies. Only the health interval is shortened, so the
+      # first probe does not wait the image's 30s. The two volumes are
+      # anonymous so they start empty and root-owned, which is what a root
+      # process without CAP_DAC_OVERRIDE can write to.
+      - name: Image boot check
+        env:
+          TEGATA_JWT_SECRET: boot-check-secret-0123456789abcdef
+          TEGATA_ADMIN_PASSWORD_HASH: $argon2id$v=19$m=65536,t=3,p=4$rX53jDF/NlBd4GnCafxfaA$5VX9rDFs+GaHmsHIuJN8xLy1LvdvYUjiQnaYXkQFBFY
+        run: |
+          docker run -d --name tegata-ci \
+            --read-only --tmpfs /tmp \
+            --cap-drop ALL --security-opt no-new-privileges \
+            --health-interval 2s \
+            -e TEGATA_JWT_SECRET -e TEGATA_ADMIN_PASSWORD_HASH \
+            -e TEGATA_DB_PATH=/data/tegata.db \
+            -e AUTHELIA_USERS_FILE=/authelia-config/users_database.yml \
+            -v /data -v /authelia-config \
+            tegata:ci
+          status=starting
+          for _ in $(seq 60); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' tegata-ci)
+            if [ "$status" = healthy ] || [ "$(docker inspect -f '{{.State.Running}}' tegata-ci)" != true ]; then
+              break
+            fi
+            sleep 1
+          done
+          if [ "$status" != healthy ]; then
+            echo "tegata:ci did not become healthy within 60s (health: $status)" >&2
+            docker logs tegata-ci >&2
+            exit 1
+          fi
+          docker stop -t 5 tegata-ci
+          exit_code=$(docker inspect -f '{{.State.ExitCode}}' tegata-ci)
+          if [ "$exit_code" -ne 0 ] && [ "$exit_code" -ne 143 ]; then
+            echo "tegata:ci exited with status $exit_code after docker stop (expected 0 or 143)" >&2
+            docker logs tegata-ci >&2
+            exit 1
+          fi
