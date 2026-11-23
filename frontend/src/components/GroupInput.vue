@@ -11,10 +11,6 @@ const emit = defineEmits<{ 'update:modelValue': [groups: string[]] }>()
 const listId = useId()
 const newGroup = ref('')
 
-// A value typed or picked from the datalist but never "added" would otherwise
-// be dropped when the modal is submitted. The input's change event fires on
-// blur, before the submit button's click, so the input also commits
-// the pending value on change.
 function addGroup(group: string) {
   const trimmed = group.trim()
   if (trimmed && !props.modelValue.includes(trimmed)) {
@@ -45,6 +41,8 @@ function handleKeydown(e: KeyboardEvent) {
     </div>
 
     <div class="group-add">
+      <!-- change fires on blur, before a submit click, so a value typed or picked
+           from the datalist is committed rather than dropped with the form. -->
       <input
         v-model="newGroup"
         type="text"

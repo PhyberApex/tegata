@@ -43,7 +43,7 @@ afterEach(() => {
 describe('groupInput inside a form', () => {
   it('adds a group on Add without submitting the form', async () => {
     const { wrapper, groups, onSubmit } = mountInForm([])
-    await wrapper.find('input').setValue('admins')
+    await typeWithoutCommitting(wrapper.find('input'), 'admins')
     await clickButton(wrapper, 'button.tg-btn')
     expect(groups.value).toEqual(['admins'])
     expect(onSubmit).not.toHaveBeenCalled()
@@ -59,9 +59,13 @@ describe('groupInput inside a form', () => {
   it('adds a group on Enter without submitting the form', async () => {
     const { wrapper, groups, onSubmit } = mountInForm([])
     const input = wrapper.find('input')
-    await input.setValue('admins')
-    await input.trigger('keydown', { key: 'Enter' })
+    await typeWithoutCommitting(input, 'admins')
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true })
+    input.element.dispatchEvent(enter)
+    await wrapper.vm.$nextTick()
     expect(groups.value).toEqual(['admins'])
+    // A synthetic keydown never submits the form, so check the default is cancelled.
+    expect(enter.defaultPrevented).toBe(true)
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
