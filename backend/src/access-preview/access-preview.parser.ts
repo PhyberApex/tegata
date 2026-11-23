@@ -320,20 +320,22 @@ function collectPolicyRuleGrants(policyRules: any[], policyName: string, preview
     const rulePolicy = typeof rule?.policy === 'string'
       ? rule.policy
       : 'unknown'
-    // a deny scoped to some networks still lets every other request through
-    if (rulePolicy === 'deny') {
-      if (rule?.networks === undefined)
-        decidePolicyRule(rule, rulePolicy, decided, policyGrants)
+    const noteUnparsed = (): void => {
+      for (const group of new Set(subjectGroups(flattenSubjects(rule?.subject))))
+        previewFor(group).notes.push(`Unparsed rule in OIDC policy "${policyName}": ${describeRule(rule)}`)
+    }
+    // a rule scoped to some networks matches only part of a group's requests,
+    // so it neither grants nor decides the group — every other request falls
+    // through to later rules
+    if (rule?.networks !== undefined) {
+      noteUnparsed()
       continue
     }
-    const subjects = flattenSubjects(rule?.subject)
-    const groups = subjectGroups(subjects)
-    if (isSingleGroupSubject(subjects, groups)) {
-      decidePolicyRule(rule, rulePolicy, decided, policyGrants)
-      continue
-    }
-    for (const group of new Set(groups))
-      previewFor(group).notes.push(`Unparsed rule in OIDC policy "${policyName}": ${describeRule(rule)}`)
+    decidePolicyRule(rule, rulePolicy, decided, policyGrants)
+    // a deny never unlocks anything, so one naming no whole group is no news;
+    // a grant naming groups only inside an AND list can't be modeled
+    if (rulePolicy !== 'deny' && wholeSubjectGroups(rule?.subject).length === 0)
+      noteUnparsed()
   }
 
   return policyGrants
