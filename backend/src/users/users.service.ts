@@ -44,6 +44,21 @@ function normalizeEmail(email: unknown): string {
 }
 
 /**
+ * What is wrong with one user entry, or `null` when every read can rely on it: a plain mapping whose `groups`
+ * is absent, null, or a list of strings.
+ */
+function malformedUserProblem(user: unknown): string | null {
+  if (typeof user !== 'object' || user === null || Array.isArray(user))
+    return 'is not a mapping'
+  const groups = (user as { groups?: unknown }).groups
+  if (groups === undefined || groups === null)
+    return null
+  return Array.isArray(groups) && groups.every(group => typeof group === 'string')
+    ? null
+    : 'has a groups value that is not a list of strings'
+}
+
+/**
  * The Unreadable Users Database state (CONTEXT.md): a missing file only counts as "start empty" before any
  * Baseline Hash has ever been recorded (fresh install). Once a row exists, a missing file is unreadable just
  * like a permission error, a parse failure, or a file that parses without a `users` mapping.
@@ -138,6 +153,15 @@ export class UsersService implements OnModuleInit {
     const db = parsed as UsersDatabase | null
     if (!db || typeof db.users !== 'object' || db.users === null || Array.isArray(db.users))
       return { readable: false, kind: 'no-users-mapping', reason: 'The users database file does not contain a valid users mapping' }
+
+    // Every later read trusts each entry to be a record with a `groups` list — an empty `bob:` (null), a
+    // scalar entry, or `groups: admins` would crash boot or turn `.includes(group)` into a substring match.
+    // The username stays in `reason` only, which never leaves the process unauthenticated.
+    for (const [username, user] of Object.entries(db.users as Record<string, unknown>)) {
+      const problem = malformedUserProblem(user)
+      if (problem)
+        return { readable: false, kind: 'no-users-mapping', reason: `User "${username}" ${problem}` }
+    }
 
     return { readable: true, db }
   }
