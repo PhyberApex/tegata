@@ -36,6 +36,15 @@ function normalizeEmail(email: unknown): string {
     : ''
 }
 
+/** A user entry every read can rely on: a plain mapping whose `groups` is absent, null, or a list of strings. */
+function isWellFormedUser(user: unknown): boolean {
+  if (typeof user !== 'object' || user === null || Array.isArray(user))
+    return false
+  const groups = (user as { groups?: unknown }).groups
+  return groups === undefined || groups === null
+    || (Array.isArray(groups) && groups.every(group => typeof group === 'string'))
+}
+
 /**
  * The Unreadable Users Database state (CONTEXT.md): a missing file only counts as "start empty" before any
  * Baseline Hash has ever been recorded (fresh install). Once a row exists, a missing file is unreadable just
@@ -131,6 +140,13 @@ export class UsersService implements OnModuleInit {
     const db = parsed as UsersDatabase | null
     if (!db || typeof db.users !== 'object' || db.users === null || Array.isArray(db.users))
       return { readable: false, kind: 'no-users-mapping', reason: 'The users database file does not contain a valid users mapping' }
+
+    // Every later read trusts each entry to be a record with a `groups` list — an empty `bob:` (null), a
+    // scalar entry, or `groups: admins` would crash boot or turn `.includes(group)` into a substring match.
+    // The username stays in `reason` only, which never leaves the process unauthenticated.
+    const malformed = Object.entries(db.users as Record<string, unknown>).find(([, user]) => !isWellFormedUser(user))
+    if (malformed)
+      return { readable: false, kind: 'no-users-mapping', reason: `User "${malformed[0]}" is not a mapping` }
 
     return { readable: true, db }
   }

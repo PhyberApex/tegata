@@ -1103,6 +1103,47 @@ describe('usersService', () => {
 
       expect(service.listUsers()).toEqual([])
     })
+
+    describe.each([
+      ['an empty entry (null)', 'users:\n  alice:\n    displayname: Alice\n    password: h\n    email: a@x\n    groups: [admins]\n  bob:\n'],
+      ['a scalar entry', 'users:\n  bob: x\n'],
+      ['an array entry', 'users:\n  bob:\n    - x\n'],
+      ['a scalar groups value', 'users:\n  bob:\n    displayname: Bob\n    password: h\n    email: b@x\n    groups: admins\n'],
+      ['a groups list with a non-string member', 'users:\n  bob:\n    displayname: Bob\n    password: h\n    email: b@x\n    groups: [admins, 3]\n'],
+    ])('a user entry with %s', (_label, content) => {
+      beforeEach(() => {
+        readFileSyncMock.mockReturnValue(content)
+      })
+
+      it('should boot without throwing and seed no groups', () => {
+        expect(() => service.onModuleInit()).not.toThrow()
+        expect(mockGroupsService.ensureGroup).not.toHaveBeenCalled()
+      })
+
+      it('should list no users', () => {
+        expect(service.listUsers()).toEqual([])
+      })
+
+      it('should report the database unreadable, naming the user only in the reason', () => {
+        const status = service.getDatabaseIntegrityStatus()
+        expect(status.unreadable).toBe(true)
+        expect(status.unreadableReason).toBe('User "bob" is not a mapping')
+      })
+
+      it('should refuse createUser with ServiceUnavailableException, without touching the file', async () => {
+        await expect(
+          service.createUser('newuser', 'New', 'new@test.com', 'pass1234', []),
+        ).rejects.toThrow(ServiceUnavailableException)
+        expect(writeFileSyncMock).not.toHaveBeenCalled()
+      })
+    })
+
+    it('should stay readable for a user whose groups is absent or null', () => {
+      readFileSyncMock.mockReturnValue('users:\n  bob:\n    displayname: Bob\n    password: h\n    email: b@x\n  carol:\n    displayname: Carol\n    password: h\n    email: c@x\n    groups:\n')
+
+      expect(service.getDatabaseIntegrityStatus().unreadable).toBe(false)
+      expect(service.listUsers().map(u => u.username)).toEqual(['bob', 'carol'])
+    })
   })
 
   describe('writeDatabase side effect', () => {
