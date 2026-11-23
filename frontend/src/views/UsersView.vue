@@ -108,7 +108,7 @@ function openCreate() {
 }
 
 function openEdit(user: User) {
-  // Adopted Authelia files may hold a user without an email; the form treats that as empty.
+  // A user in the Authelia Users Database may have no email; the form treats that as empty.
   const email = user.email ?? ''
   editForm.value = {
     username: user.username,
@@ -152,8 +152,8 @@ async function handleCreate() {
 }
 
 /**
- * Only the fields the admin changed: re-sending an untouched on-file value the backend would now
- * reject (an email such as admin@localhost, adopted from an existing Authelia file) blocks the save.
+ * Only the fields the admin changed: an untouched on-file value the backend rejects (an email such as
+ * admin@localhost in the Authelia Users Database) must not block saving the other fields.
  */
 function changedEditFields(): Partial<EditUserFields> {
   const changes: Partial<EditUserFields> = {}

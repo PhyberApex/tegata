@@ -10,7 +10,8 @@ export type {
 export interface User {
   username: string
   displayname: string
-  email: string
+  /** Absent when the Authelia Users Database holds the user without one. */
+  email?: string
   groups: string[]
   disabled: boolean
 }

@@ -1,3 +1,4 @@
+import type { User } from '../types'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import UsersView from './UsersView.vue'
@@ -73,15 +74,16 @@ describe('usersView modal error', () => {
 
 describe('usersView edit user', () => {
   interface Fixture {
-    user: Record<string, unknown>
+    user: User
     patchStatus?: number
     patchBody?: unknown
   }
 
-  function respondWithEditFixture({ user, patchStatus = 200, patchBody = { success: true } }: Fixture) {
+  function respondWithEditFixture({ user, patchStatus = 200, patchBody }: Fixture) {
     const patchBodies: unknown[] = []
     fetchMock.mockImplementation((url: string, opts?: RequestInit) => {
       if (opts?.method === 'PATCH') {
+        expect(url).toBe('/api/users/svc')
         patchBodies.push(JSON.parse(opts.body as string))
         const status = patchBodies.length === 1
           ? patchStatus
@@ -101,8 +103,8 @@ describe('usersView edit user', () => {
     return patchBodies
   }
 
-  function svcUser(email: unknown) {
-    const user: Record<string, unknown> = {
+  function svcUser(email: string | undefined): User {
+    const user: User = {
       username: 'svc',
       displayname: 'Service',
       groups: ['users'],
@@ -113,14 +115,27 @@ describe('usersView edit user', () => {
     return user
   }
 
-  function findDialog(title: string) {
+  // A dialog's accessible name comes from the title its aria-labelledby points at.
+  function findDialog(label: string): HTMLElement {
     const dialog = [
-      ...document.body.querySelectorAll('[role="dialog"]'),
+      ...document.body.querySelectorAll<HTMLElement>('[role="dialog"]'),
     ]
-      .find(el => el.textContent?.includes(title))
+      .find((el) => {
+        const labelId = el.getAttribute('aria-labelledby')
+        return labelId !== null && document.getElementById(labelId)?.textContent?.trim() === label
+      })
     if (!dialog)
-      throw new Error(`No dialog found with title "${title}"`)
+      throw new Error(`No dialog found labelled "${label}"`)
     return dialog
+  }
+
+  function clickButtonIn(root: HTMLElement, text: string) {
+    const button = [
+      ...root.querySelectorAll('button'),
+    ].find(el => el.textContent?.trim() === text)
+    if (!button)
+      throw new Error(`No button found with text "${text}"`)
+    button.click()
   }
 
   function editForm() {
@@ -145,15 +160,12 @@ describe('usersView edit user', () => {
     editForm().dispatchEvent(new Event('submit'))
     await flushPromises()
     const diffDialog = findDialog('Confirm Access Change')
-    const confirm = [
-      ...diffDialog.querySelectorAll('button'),
-    ].find(b => b.textContent?.trim() === 'Confirm')!
-    confirm.click()
+    clickButtonIn(diffDialog, 'Confirm')
     await flushPromises()
   }
 
   it.each([
-    ['a non-IsEmail address', 'admin@localhost'],
+    ['an address the backend email check rejects', 'admin@localhost'],
     ['an empty email', ''],
     ['no email', undefined],
   ])('sends only the groups when editing the groups of a user with %s', async (_label, email) => {
@@ -250,10 +262,7 @@ describe('usersView edit user', () => {
     await submitEditAndConfirmAccessChange()
 
     const retryDialog = findDialog('Confirm Action')
-    const confirm = [
-      ...retryDialog.querySelectorAll('button'),
-    ].find(b => b.textContent?.trim() === 'Confirm')!
-    confirm.click()
+    clickButtonIn(retryDialog, 'Confirm')
     await flushPromises()
 
     expect(patchBodies).toEqual([
@@ -287,10 +296,7 @@ describe('usersView edit user', () => {
     await flushPromises()
 
     const retryDialog = findDialog('Confirm Action')
-    const confirm = [
-      ...retryDialog.querySelectorAll('button'),
-    ].find(b => b.textContent?.trim() === 'Confirm')!
-    confirm.click()
+    clickButtonIn(retryDialog, 'Confirm')
     await flushPromises()
 
     expect(patchBodies).toEqual([
