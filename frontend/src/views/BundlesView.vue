@@ -66,6 +66,7 @@ onMounted(loadData)
 
 function openDelete(name: string) {
   deleteTarget.value = name
+  modalAction.error.value = ''
   showDeleteConfirm.value = true
 }
 
