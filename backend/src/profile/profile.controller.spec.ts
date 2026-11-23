@@ -4,7 +4,7 @@ import { Test, TestingModule } from '@nestjs/testing'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProfileGuard, ProfileRequest } from '../auth/profile.guard'
 import { UnverifiablePasswordHashException, UsersService } from '../users/users.service'
-import { ProfileController } from './profile.controller'
+import { ProfileController, UpdateProfileDto } from './profile.controller'
 
 describe('profileController', () => {
   let controller: ProfileController
@@ -72,20 +72,37 @@ describe('profileController', () => {
   })
 
   describe('update', () => {
-    it('should call updateUser with the session username and only the DTO fields', () => {
-      const updated = {
+    it('should call updateUser with the session username and return username, displayname and email, not groups or disabled', () => {
+      mockUsersService.updateUser.mockReturnValue({
         username: 'alice',
         displayname: 'Alice A',
         email: 'alice@example.com',
         groups: ['users'],
         disabled: false,
-      }
-      mockUsersService.updateUser.mockReturnValue(updated)
+      })
 
       const result = controller.update(requestFor('alice'), { displayname: 'Alice A', email: 'alice@example.com' })
 
       expect(mockUsersService.updateUser).toHaveBeenCalledWith('alice', { displayname: 'Alice A', email: 'alice@example.com' })
-      expect(result).toEqual(updated)
+      expect(result).toStrictEqual({ username: 'alice', displayname: 'Alice A', email: 'alice@example.com' })
+    })
+
+    it('should not pass a DTO\'s extra groups or disabled property on to updateUser', () => {
+      mockUsersService.updateUser.mockReturnValue({} as any)
+      const dto = Object.assign(new UpdateProfileDto(), {
+        email: 'alice@example.com',
+        groups: ['tegata'],
+        disabled: false,
+      })
+
+      controller.update(requestFor('alice'), dto)
+
+      expect(mockUsersService.updateUser.mock.calls).toStrictEqual([
+        [
+          'alice',
+          { displayname: undefined, email: 'alice@example.com' },
+        ],
+      ])
     })
 
     it('should ignore an attacker-supplied username and use the session one', () => {
