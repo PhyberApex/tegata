@@ -12,7 +12,7 @@ import { buildAccessPreviews } from './access-preview.parser'
 // A YAMLException's message embeds a snippet of the surrounding source lines,
 // and configuration.yml usually inlines secrets — so build the reason from the
 // bare reason and position only, never from err.message or mark.snippet.
-function describeReadError(err: unknown): string {
+function describeConfigLoadError(err: unknown): string {
   if (err instanceof yaml.YAMLException) {
     const position = err.mark
       ? ` (line ${err.mark.line + 1}, column ${err.mark.column + 1})`
@@ -49,7 +49,7 @@ export class AccessPreviewService {
       parsed = yaml.load(readFileSync(this.configPath, 'utf-8'))
     }
     catch (err) {
-      const reason = describeReadError(err)
+      const reason = describeConfigLoadError(err)
       this.logger.warn(reason)
       return { available: false, reason, guardedGroups: this.guardedGroups }
     }

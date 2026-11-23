@@ -153,7 +153,7 @@ describe('accessPreviewService', () => {
       if (result.available)
         throw new Error('Expected previews to be unavailable')
       expect(result.reason).toMatch(/not valid YAML/)
-      expect(result.reason).toMatch(/line \d+, column \d+/)
+      expect(result.reason).toContain('(line 10, column 9)')
 
       expect(warnSpy).toHaveBeenCalled()
       const logged = warnSpy.mock.calls.map(call => call.map(String).join(' '))
