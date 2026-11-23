@@ -11,7 +11,7 @@ import { AuthService } from '../auth/auth.service'
 import { NativeLoginFence } from '../auth/native-login-fence'
 import { ProfileGuard } from '../auth/profile.guard'
 import { NativeLoginMetrics } from '../metrics/native-login-metrics'
-import { UsersService } from '../users/users.service'
+import { UnverifiablePasswordHashException, UsersService } from '../users/users.service'
 import { ProfileController } from './profile.controller'
 
 /**
@@ -126,6 +126,16 @@ describe('profile over HTTP', () => {
   it('should answer 401 to a Native Login session, which has no sub, and read nothing', async () => {
     expect((await getProfile(nativeToken)).status).toBe(401)
     expect(usersService.lookupAccount).not.toHaveBeenCalled()
+  })
+
+  it('should answer 422 with the admin-reset message when the stored hash is not one Tegata can verify', async () => {
+    usersService.verifyPassword.mockRejectedValueOnce(new UnverifiablePasswordHashException())
+
+    const res = await changePassword()
+
+    expect(res.status).toBe(422)
+    expect(((await res.json()) as { message: string }).message).toBe(new UnverifiablePasswordHashException().message)
+    expect(usersService.resetPassword).not.toHaveBeenCalled()
   })
 
   it('should answer 409 without naming the other account when the email is already on another user', async () => {

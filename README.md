@@ -139,7 +139,9 @@ It assumes the per-user keys `displayname`, `password`, `email`, `groups` and `d
   OIDC `authorization_policies` only. Anything else in `configuration.yml` is not reflected.
 - **Password hashes.** Tegata writes argon2id. Authelia also accepts other digests it finds in
   the file, and Tegata never rewrites a hash it did not create — only a password set or reset
-  through Tegata produces a new argon2id hash.
+  through Tegata produces a new argon2id hash. Tegata can only check a current password against
+  an argon2 hash, so a user with any other digest cannot change their password on the profile
+  page; an admin has to send them a reset link (or reset it) instead.
 
 ## Running it
 
