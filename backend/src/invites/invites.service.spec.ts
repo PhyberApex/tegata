@@ -309,6 +309,28 @@ describe('invitesService', () => {
 
       expect(mockRun).toHaveBeenCalledWith('SMTP is not configured', 'uuid-id-9')
     })
+
+    it('should default to a 7-day expiry for a null expiresInDays', async () => {
+      mockGet.mockReturnValue({
+        id: 'invite-id',
+        token: 'invite-token',
+        groups: '["users"]',
+        expires_at: '2099-01-01T00:00:00.000Z',
+        email: null,
+        displayname: null,
+        used_by: null,
+        used_at: null,
+        created_at: '2024-01-01T00:00:00.000Z',
+      })
+      const before = Date.now()
+
+      await service.createInvite(['users'], null)
+
+      const insertCall = mockRun.mock.calls.find(call => call[2] === '["users"]')!
+      const expiresAt = new Date(insertCall[3] as string).getTime()
+      expect(expiresAt).toBeGreaterThanOrEqual(before + 7 * 24 * 60 * 60 * 1000)
+      expect(expiresAt).toBeLessThanOrEqual(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    })
   })
 
   describe('sendInviteEmail', () => {

@@ -1,20 +1,21 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common'
-import { IsBoolean, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator'
+import { IsBoolean, IsInt, IsString, Max, Min, MinLength } from 'class-validator'
 import { AuthGuard } from '../auth/auth.guard'
+import { IsOptionalNotNull } from '../common/name-validation'
 import { ResetTokensService } from './reset-tokens.service'
 
-class CreateResetTokenDto {
+export class CreateResetTokenDto {
   @IsString()
   @MinLength(1)
   username!: string
 
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1)
   @Max(90)
   expiresInDays?: number
 
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsBoolean()
   sendEmail?: boolean
 }

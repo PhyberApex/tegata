@@ -1,12 +1,20 @@
 import type { PipeTransform } from '@nestjs/common'
 import { applyDecorators } from '@nestjs/common'
 import { Transform } from 'class-transformer'
-import { ArrayUnique, IsArray, IsNotEmpty, IsString } from 'class-validator'
+import { ArrayUnique, IsArray, IsNotEmpty, IsString, ValidateIf } from 'class-validator'
 
 function trimValue(value: unknown) {
   return typeof value === 'string'
     ? value.trim()
     : value
+}
+
+/**
+ * An optional field that may be omitted but not sent as JSON `null`: `@IsOptional()` skips validation for
+ * both, and every service reads a field as absent only when it is `undefined`.
+ */
+export function IsOptionalNotNull() {
+  return ValidateIf((_, value) => value !== undefined)
 }
 
 /** Trims the string, then rejects empty / whitespace-only values. */

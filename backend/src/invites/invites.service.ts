@@ -38,10 +38,10 @@ export class InvitesService {
     }
   }
 
-  async createInvite(groups: string[], expiresInDays = 7, prefill: InvitePrefill = {}, bundleName?: string | null, sendEmail = false): Promise<Invite> {
+  async createInvite(groups: string[], expiresInDays?: number | null, prefill: InvitePrefill = {}, bundleName?: string | null, sendEmail = false): Promise<Invite> {
     const id = randomUUID()
     const token = randomUUID()
-    const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
+    const expiresAt = new Date(Date.now() + (expiresInDays ?? 7) * 24 * 60 * 60 * 1000).toISOString()
 
     for (const group of groups)
       this.groupsService.ensureGroup(group)

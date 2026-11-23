@@ -545,6 +545,31 @@ describe('usersService', () => {
       expect(writeFileSyncMock).toHaveBeenCalled()
     })
 
+    it('should never write a null displayname, email, groups or disabled', () => {
+      readFileSyncMock.mockReturnValue(THREE_ENABLED_USERS_YAML)
+      service.updateUser('alice', { disabled: true })
+      const disabledYaml = writeFileSyncMock.mock.calls.at(-1)![1] as string
+      readFileSyncMock.mockReturnValue(disabledYaml)
+
+      const result = service.updateUser('alice', {
+        displayname: null,
+        email: null,
+        groups: null,
+        disabled: null,
+      })
+
+      expect(result).toEqual({
+        username: 'alice',
+        displayname: 'Alice Smith',
+        email: 'alice@example.com',
+        groups: ['admins'],
+        disabled: true,
+      })
+      const written = writeFileSyncMock.mock.calls.at(-1)![1] as string
+      expect(written).not.toContain('null')
+      expect(written).toContain('disabled: true')
+    })
+
     it('should throw NotFoundException for unknown user', () => {
       expect(() => service.updateUser('ghost', { email: 'x@y.com' })).toThrow(NotFoundException)
     })

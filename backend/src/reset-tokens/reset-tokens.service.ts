@@ -28,13 +28,13 @@ export class ResetTokensService {
     private mailService: MailService,
   ) {}
 
-  async createResetToken(username: string, expiresInDays = 1, sendEmail = false): Promise<ResetToken> {
+  async createResetToken(username: string, expiresInDays?: number | null, sendEmail = false): Promise<ResetToken> {
     if (!this.usersService.userExists(username))
       throw new NotFoundException(`User "${username}" not found`)
 
     const id = randomUUID()
     const token = randomUUID()
-    const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
+    const expiresAt = new Date(Date.now() + (expiresInDays ?? 1) * 24 * 60 * 60 * 1000).toISOString()
 
     this.db.instance
       .prepare('DELETE FROM reset_tokens WHERE username = ? AND used_at IS NULL')
