@@ -23,7 +23,7 @@ describe('helmetOptions', () => {
   it('keeps upgrade-insecure-requests and HSTS under production', () => {
     const headers = headersFor('production')
     expect(headers.get('content-security-policy')).toContain('upgrade-insecure-requests')
-    expect(headers.get('strict-transport-security')).toBeDefined()
+    expect(headers.get('strict-transport-security')).toMatch(/max-age=\d+/)
   })
 
   it.each(['development', undefined])('drops upgrade-insecure-requests and HSTS when NODE_ENV is %s', (nodeEnv) => {

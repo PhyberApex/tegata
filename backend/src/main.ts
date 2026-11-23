@@ -39,7 +39,7 @@ async function bootstrap() {
   // req.protocol read the forwarded headers correctly
   app.getHttpAdapter().getInstance().set('trust proxy', trustProxy)
 
-  // process.env, like the cookie flag: plain HTTP drops the HTTPS-only headers alongside Secure
+  // Same NODE_ENV source as the cookie flag, so headers and cookies agree on HTTP vs HTTPS
   app.use(helmet(helmetOptions(process.env.NODE_ENV)))
   app.use(cookieParser())
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }))
