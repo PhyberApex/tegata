@@ -4,10 +4,10 @@
 # env var, an ESM import that only fails at runtime, or a fresh-database start
 # is caught in CI instead of at the container's first boot in production.
 #
-# POSIX sh on purpose - node:24-alpine (busybox ash) runs it unchanged. The
-# probe is whichever of wget (busybox ships it) or curl (a workstation usually
-# ships only that) is on PATH; both return non-zero on a non-2xx answer, which
-# is what makes them interchangeable here.
+# POSIX sh on purpose - the image's node:*-alpine base (busybox ash) runs it
+# unchanged. The probe is whichever of wget (busybox ships it) or curl (a
+# workstation usually ships only that) is on PATH; both return non-zero on a
+# non-2xx answer, which is what makes them interchangeable here.
 #
 # Once healthy it sends SIGTERM, as `docker stop` does, and requires the
 # process to exit by itself within BOOT_STOP_TIMEOUT_S with status 0 or 143
