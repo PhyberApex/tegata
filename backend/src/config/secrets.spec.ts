@@ -35,6 +35,24 @@ describe('assertAdminPasswordHash', () => {
     await expect(assertAdminPasswordHash('=19=65536,t=3,p=4')).rejects.toThrow(/TEGATA_ADMIN_PASSWORD_HASH.*\$\$/s)
   })
 
+  it('hints that compose interpolated the $ signs when the value does not start with $argon2', async () => {
+    await expect(assertAdminPasswordHash('=19=65536,t=3,p=4')).rejects.toThrow(/does not start with `\$argon2`.*Compose interpolated/s)
+  })
+
+  it('does not add the interpolation hint when the value starts with $argon2', async () => {
+    await expect(assertAdminPasswordHash('$argon2x$v=19$m=32,t=1,p=1$c2FsdHNhbHQ$aGFzaGhhc2g')).rejects.not.toThrow(/interpolated/)
+  })
+
+  it.each([
+    ['an argon2 prefix mismatch', '$2b$10$abcdefghijklmnopqrstuuJ2bY0q3M7W4pQwIYbz2mOq3U8oVQ6xS'],
+    ['an unparseable argon2 hash', '$argon2id$v=19$m=65536,t=3,p=4$...'],
+  ])('names the quoting rule for env_file and environment: on %s', async (_, value) => {
+    const error = await assertAdminPasswordHash(value).then(() => undefined, (e: Error) => e)
+    expect(error?.message).toMatch(/`env_file:`.*single quotes/s)
+    expect(error?.message).toMatch(/`environment:`.*doubled/s)
+    expect(error?.message).not.toMatch(/literally/)
+  })
+
   it.each([
     '$2b$10$abcdefghijklmnopqrstuuJ2bY0q3M7W4pQwIYbz2mOq3U8oVQ6xS',
     '$scrypt$ln=16,r=8,p=1$c2FsdA$aGFzaA',

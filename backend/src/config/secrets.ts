@@ -5,7 +5,8 @@ const MIN_JWT_SECRET_LENGTH = 32
 const PLACEHOLDER_JWT_SECRET = 'change-me'
 const ARGON2_PREFIX = /^\$argon2(?:id|i|d)\$/
 const JWT_SECRET_FIX = 'generate one with: openssl rand -hex 32'
-const DOLLAR_RULE = 'In a compose `environment:` list every `$` in the hash has to be doubled (`$$`); in an `env_file:` it is taken literally.'
+const DOLLAR_RULE = 'Compose interpolates `$` in both places: in an `env_file:` wrap the hash in single quotes (or double every `$`); in a compose `environment:` list every `$` has to be doubled (`$$`).'
+const INTERPOLATED_HINT = 'The value does not start with `$argon2`, which usually means Compose interpolated its `$` signs.'
 
 /**
  * Throws unless TEGATA_JWT_SECRET is a real secret: not the `.env.example` placeholder and at least
@@ -26,8 +27,11 @@ export function assertJwtSecret(secret: string): void {
  */
 export async function assertAdminPasswordHash(passwordHash: string): Promise<void> {
   if (!ARGON2_PREFIX.test(passwordHash)) {
+    const hint = passwordHash.startsWith('$argon2')
+      ? ''
+      : ` ${INTERPOLATED_HINT}`
     throw new Error(
-      `TEGATA_ADMIN_PASSWORD_HASH must be an argon2 hash starting with $argon2id$, $argon2i$ or $argon2d$. ${DOLLAR_RULE}`,
+      `TEGATA_ADMIN_PASSWORD_HASH must be an argon2 hash starting with $argon2id$, $argon2i$ or $argon2d$.${hint} ${DOLLAR_RULE}`,
     )
   }
   try {
