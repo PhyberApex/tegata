@@ -36,13 +36,19 @@ function normalizeEmail(email: unknown): string {
     : ''
 }
 
-/** A user entry every read can rely on: a plain mapping whose `groups` is absent, null, or a list of strings. */
-function isWellFormedUser(user: unknown): boolean {
+/**
+ * What is wrong with one user entry, or `null` when every read can rely on it: a plain mapping whose `groups`
+ * is absent, null, or a list of strings.
+ */
+function malformedUserProblem(user: unknown): string | null {
   if (typeof user !== 'object' || user === null || Array.isArray(user))
-    return false
+    return 'is not a mapping'
   const groups = (user as { groups?: unknown }).groups
-  return groups === undefined || groups === null
-    || (Array.isArray(groups) && groups.every(group => typeof group === 'string'))
+  if (groups === undefined || groups === null)
+    return null
+  return Array.isArray(groups) && groups.every(group => typeof group === 'string')
+    ? null
+    : 'has a groups value that is not a list of strings'
 }
 
 /**
@@ -144,9 +150,11 @@ export class UsersService implements OnModuleInit {
     // Every later read trusts each entry to be a record with a `groups` list — an empty `bob:` (null), a
     // scalar entry, or `groups: admins` would crash boot or turn `.includes(group)` into a substring match.
     // The username stays in `reason` only, which never leaves the process unauthenticated.
-    const malformed = Object.entries(db.users as Record<string, unknown>).find(([, user]) => !isWellFormedUser(user))
-    if (malformed)
-      return { readable: false, kind: 'no-users-mapping', reason: `User "${malformed[0]}" is not a mapping` }
+    for (const [username, user] of Object.entries(db.users as Record<string, unknown>)) {
+      const problem = malformedUserProblem(user)
+      if (problem)
+        return { readable: false, kind: 'no-users-mapping', reason: `User "${username}" ${problem}` }
+    }
 
     return { readable: true, db }
   }
