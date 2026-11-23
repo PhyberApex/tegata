@@ -87,6 +87,9 @@ export class InvitesController {
     if (!invite || !isPendingInvite(invite))
       return { valid: false }
 
+    if (this.invitesService.isPrefillEmailTaken(invite))
+      return { valid: false, reason: 'This invite\'s email address is already in use. Ask your admin for a new invite.' }
+
     return {
       valid: true,
       groups: invite.groups,

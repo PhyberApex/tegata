@@ -48,7 +48,7 @@ describe('invitesService', () => {
   let mockRun: Mock
   let mockGet: Mock
   let mockAll: Mock
-  let mockUsersService: Mocked<Pick<UsersService, 'createUser'>>
+  let mockUsersService: Mocked<Pick<UsersService, 'createUser' | 'isEmailTaken'>>
   let mockGroupsService: Mocked<Pick<GroupsService, 'ensureGroup'>>
   let mockMailService: Mocked<Pick<MailService, 'sendInviteEmail'>>
 
@@ -69,6 +69,7 @@ describe('invitesService', () => {
 
     mockUsersService = {
       createUser: vi.fn(),
+      isEmailTaken: vi.fn(() => false),
     }
 
     mockGroupsService = {
@@ -169,6 +170,21 @@ describe('invitesService', () => {
       )
       expect(result.email).toBe('alice@test.com')
       expect(result.displayname).toBe('Alice')
+      expect(mockUsersService.isEmailTaken).toHaveBeenCalledWith('alice@test.com')
+    })
+
+    it('should refuse a pre-fill email that already belongs to a user, inserting nothing and sending nothing', async () => {
+      mockUsersService.isEmailTaken.mockImplementation(email => email.trim().toLowerCase() === 'alice@test.com')
+
+      await expect(
+        service.createInvite(['users'], 7, { email: 'Alice@Test.com' }, undefined, true),
+      ).rejects.toThrow(new ConflictException('That email address is already in use'))
+      await flushPromises()
+
+      expect(mockUsersService.isEmailTaken).toHaveBeenCalledWith('Alice@Test.com')
+      expect(mockRun).not.toHaveBeenCalled()
+      expect(mockGroupsService.ensureGroup).not.toHaveBeenCalled()
+      expect(mockMailService.sendInviteEmail).not.toHaveBeenCalled()
     })
 
     it('should persist null email and displayname when prefill omitted', async () => {

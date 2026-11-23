@@ -791,6 +791,26 @@ describe('usersService', () => {
     })
   })
 
+  describe('isEmailTaken', () => {
+    it('should report an email already on a user, compared trimmed and case-insensitively', () => {
+      expect(service.isEmailTaken(' Alice@Example.COM ')).toBe(true)
+    })
+
+    it('should report a free email as not taken', () => {
+      expect(service.isEmailTaken('carol@example.com')).toBe(false)
+    })
+
+    it('should report an empty email as not taken', () => {
+      expect(service.isEmailTaken('  ')).toBe(false)
+    })
+
+    it('should throw ServiceUnavailableException instead of false when the database is unreadable', () => {
+      readFileSyncMock.mockImplementation(() => { throw new Error('permission denied') })
+
+      expect(() => service.isEmailTaken('alice@example.com')).toThrow(ServiceUnavailableException)
+    })
+  })
+
   describe('isEnabledUser', () => {
     it('should return true for an enabled user', () => {
       expect(service.isEnabledUser('alice')).toBe(true)

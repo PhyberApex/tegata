@@ -12,6 +12,7 @@ const api = useApi()
 
 const token = route.params.token as string
 const valid = ref<boolean | null>(null)
+const invalidReason = ref('')
 const groups = ref<string[]>([])
 const success = ref(false)
 const error = ref('')
@@ -94,6 +95,7 @@ onMounted(async () => {
   try {
     const res = await api.get<InviteValidation>(`/api/invites/${token}/validate`)
     valid.value = res.valid
+    invalidReason.value = res.reason ?? ''
     if (res.groups)
       groups.value = res.groups
     const patch = inviteFieldsPatch(form.value, res)
@@ -150,7 +152,10 @@ async function handleRegister() {
           Invalid Invite
         </h1>
       </div>
-      <p class="register-message">
+      <p v-if="invalidReason" class="register-message">
+        {{ invalidReason }}
+      </p>
+      <p v-else class="register-message">
         This invite link is invalid, expired, or has already been used. Ask your admin to send you a new one.
       </p>
     </div>

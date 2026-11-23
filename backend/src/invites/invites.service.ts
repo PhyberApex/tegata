@@ -1,6 +1,6 @@
 import type { Invite } from '@tegata/shared'
 import { randomUUID } from 'node:crypto'
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { DatabaseService } from '../database/database.service'
 import { GroupsService } from '../groups/groups.service'
 import { MailService } from '../mail/mail.service'
@@ -39,6 +39,10 @@ export class InvitesService {
   }
 
   async createInvite(groups: string[], expiresInDays?: number | null, prefill: InvitePrefill = {}, bundleName?: string | null, sendEmail = false): Promise<Invite> {
+    // Refused up front: redemption would answer 409 on every attempt, and the invitee cannot change a pre-filled email.
+    if (prefill.email && this.usersService.isEmailTaken(prefill.email))
+      throw new ConflictException('That email address is already in use')
+
     const id = randomUUID()
     const token = randomUUID()
     const expiresAt = new Date(Date.now() + (expiresInDays ?? 7) * 24 * 60 * 60 * 1000).toISOString()
@@ -93,6 +97,14 @@ export class InvitesService {
       throw new NotFoundException('Invite not found')
 
     return updated
+  }
+
+  /**
+   * Whether the invite's pre-filled email has been taken by a user since the invite was created — such an invite
+   * can never be redeemed, since redemption uses the pre-filled email over the submitted one.
+   */
+  isPrefillEmailTaken(invite: Invite): boolean {
+    return invite.email !== null && this.usersService.isEmailTaken(invite.email)
   }
 
   listInvites(): Invite[] {

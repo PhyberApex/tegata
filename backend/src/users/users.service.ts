@@ -506,6 +506,15 @@ export class UsersService implements OnModuleInit {
   }
 
   /**
+   * Whether `email` already belongs to a user, compared the way `createUser` refuses it (trimmed,
+   * case-insensitive). An empty email is never taken. Throws when the database is unreadable, like `userExists`.
+   */
+  isEmailTaken(email: string): boolean {
+    const wanted = normalizeEmail(email)
+    return wanted !== '' && Object.values(this.readDatabaseOrThrow().users).some(user => normalizeEmail(user.email) === wanted)
+  }
+
+  /**
    * Whether `username` may still act on its own account: present in the users database and Enabled.
    * Throws when the database is unreadable, for the same reason as `userExists` — a live session should
    * see a 503, not be told its account is gone.
