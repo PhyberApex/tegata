@@ -1,5 +1,6 @@
 import type { Mock } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Test, TestingModule } from '@nestjs/testing'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -126,6 +127,49 @@ describe('accessPreviewService', () => {
 
     expect(result.available).toBe(false)
     expect(result).not.toHaveProperty('configNotes')
+  })
+
+  it('should report a YAML error by line and column without leaking any file content', () => {
+    const content = [
+      'session:',
+      '  secret: "session-secret-do-not-leak"',
+      'storage:',
+      '  encryption_key: "storage-key-do-not-leak"',
+      'identity_providers:',
+      '  oidc:',
+      '    clients:',
+      '      - client_id: tegata-id',
+      '        client_secret: "$pbkdf2-sha512$310000$unterminated',
+      '        client_name: Tegata',
+      '        authorization_policy: two_factor',
+    ].join('\n')
+    readFileSyncMock.mockReturnValue(content)
+    const warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {})
+
+    try {
+      const result = service.getPreviews()
+
+      expect(result.available).toBe(false)
+      if (result.available)
+        throw new Error('Expected previews to be unavailable')
+      expect(result.reason).toMatch(/not valid YAML/)
+      expect(result.reason).toContain('(line 10, column 9)')
+
+      expect(warnSpy).toHaveBeenCalled()
+      const logged = warnSpy.mock.calls.map(call => call.map(String).join(' '))
+      for (const text of [result.reason, ...logged]) {
+        for (const line of content.split('\n')) {
+          const trimmed = line.trim()
+          if (trimmed)
+            expect(text).not.toContain(trimmed)
+        }
+        expect(text).not.toContain('do-not-leak')
+        expect(text).not.toContain('pbkdf2')
+      }
+    }
+    finally {
+      warnSpy.mockRestore()
+    }
   })
 
   it('should flag an unacknowledged open OIDC policy as a config note', () => {
