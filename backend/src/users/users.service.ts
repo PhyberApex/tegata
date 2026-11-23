@@ -77,8 +77,13 @@ export interface UnreadableUsersDatabase { readable: false, kind: UnreadableKind
 
 export type UsersDatabaseReadability = { readable: true } | UnreadableUsersDatabase
 
+/** Whether `stored` names an argon2 variant — the only digest `argon2.verify` can check a password against. */
+function isArgon2Hash(stored: unknown): stored is string {
+  return typeof stored === 'string' && stored.startsWith('$argon2')
+}
+
 /**
- * A user's stored hash is one Tegata cannot check a password against — another digest Authelia accepts
+ * An Unverifiable Password Hash (CONTEXT.md): a user's stored hash is one Tegata cannot check a password against — another digest Authelia accepts
  * (sha512-crypt, bcrypt, pbkdf2…), a malformed argon2 string, or no `password` at all. Distinct from a wrong
  * password: retrying cannot succeed, only a reset through Tegata (which writes argon2id) can.
  */
@@ -709,13 +714,18 @@ export class UsersService implements OnModuleInit {
     if (!user)
       return false
 
+    // Typed `string`, but a hand-edited entry may carry no `password` or a non-string one.
     const stored: unknown = user.password
-    if (typeof stored !== 'string' || !stored.startsWith('$argon2'))
+    if (!isArgon2Hash(stored))
       throw new UnverifiablePasswordHashException()
     try {
       return await argon2.verify(stored, password)
     }
-    catch {
+    catch (err) {
+      // Logged so a fault other than an unparsable hash stays visible behind the 422.
+      this.logger.warn(`argon2 could not verify the stored hash of ${username}: ${err instanceof Error
+        ? err.message
+        : String(err)}`)
       throw new UnverifiablePasswordHashException()
     }
   }
