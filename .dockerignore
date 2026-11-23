@@ -12,10 +12,12 @@
 **/.env*
 !**/.env.example
 
-# Local development state (docker-compose.dev.yml, `pnpm dev`)
+# Local development state (docker-compose.dev.yml, `pnpm dev`); Docker does
+# not read .gitignore, so this mirrors its block of the same name.
 backend/tegata.db*
 backend/users_database.yml
-dev-authelia-config
+dev-authelia-config/
 
+# Not build inputs: docs, and the GitHub Pages site
 docs
 site
