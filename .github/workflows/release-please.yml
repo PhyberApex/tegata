@@ -21,11 +21,20 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 
+  # main has no branch protection, so a release PR can merge while main is
+  # red; the release image waits on the same checks the :next image does.
+  checks:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/checks.yml
+
   # The release image is built in the same run so it can read release-please's
   # outputs directly instead of depending on a separate `release` event.
   build-and-push-release:
     runs-on: ubuntu-latest
-    needs: release-please
+    needs: [release-please, checks]
     if: ${{ needs.release-please.outputs.release_created == 'true' }}
     permissions:
       contents: read
