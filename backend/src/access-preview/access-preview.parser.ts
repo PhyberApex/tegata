@@ -1,6 +1,7 @@
 import type { GroupAccessPreview } from './access-preview.types'
 
 const GROUP_PLACEHOLDER = '{group}'
+const GROUP_PLACEHOLDER_LABEL = `${GROUP_PLACEHOLDER}.`
 const GROUP_SUBJECT_PREFIX = 'group:'
 const RULE_QUALIFIERS = [
   'resources',
@@ -42,8 +43,24 @@ function subjectGroups(subjects: string[]): string[] {
     .map(s => s.slice(GROUP_SUBJECT_PREFIX.length))
 }
 
+// YAML reads a key left empty (`resources:`) as null, which Authelia treats as unset
+function isSet(value: unknown): boolean {
+  return value !== undefined && value !== null
+}
+
 function ruleQualifiers(rule: AccessRule): string[] {
-  return RULE_QUALIFIERS.filter(key => rule[key] !== undefined)
+  return RULE_QUALIFIERS.filter(key => isSet(rule[key]))
+}
+
+// Authelia documents {group} only as the leading label (`{group}.example.com`);
+// anywhere else it isn't substituted the way this preview could model
+function isLeadingPlaceholder(domain: string): boolean {
+  return domain.startsWith(GROUP_PLACEHOLDER_LABEL)
+    && !domain.slice(GROUP_PLACEHOLDER.length).includes(GROUP_PLACEHOLDER)
+}
+
+function substituteLeadingPlaceholder(domain: string, group: string): string {
+  return group + domain.slice(GROUP_PLACEHOLDER.length)
 }
 
 function isSingleGroupSubject(subjects: string[], groups: string[]): boolean {
@@ -119,9 +136,9 @@ class DecidedDomains {
 
   // groups undefined means the deny names no subject and so matches everyone
   deny(domain: string, groups: string[] | undefined): void {
-    if (domain.includes(GROUP_PLACEHOLDER)) {
+    if (isLeadingPlaceholder(domain)) {
       for (const group of groups ?? this.knownGroups)
-        this.record(group, domain.replaceAll(GROUP_PLACEHOLDER, group), 'deny')
+        this.record(group, substituteLeadingPlaceholder(domain, group), 'deny')
       return
     }
     for (const group of groups ?? [EVERYONE])
@@ -169,7 +186,7 @@ interface RuleAttributes {
 
 type RuleClassification
   = | { kind: 'skip' }
-    | { kind: 'deny', domains: string[], groups: string[] | undefined }
+    | { kind: 'deny', domains: string[], groups: string[] | undefined, notedGroups: string[] }
     | { kind: 'placeholder', domains: string[], literalDomains: string[], policy: string }
     | { kind: 'everyone', domains: string[], policy: string }
     | { kind: 'modeled', domains: string[], groups: string[], policy: string }
@@ -194,20 +211,47 @@ function parseRuleAttributes(rule: AccessRule): RuleAttributes {
 // a deny never unlocks anything, but one that matches every request to its
 // domains decides them for every later rule; a qualified one decides nothing.
 // domain_regex is OR'd with domain, so the literal domains still decide — the
-// regex itself isn't modeled
-function matchDeny(rule: AccessRule, attrs: RuleAttributes): RuleClassification | undefined {
+// regex itself isn't modeled, so a deny that decides only through a regex, or
+// through a {group} this preview can't substitute, is noted for its groups
+function matchDeny(rule: AccessRule, attrs: RuleAttributes, knownGroups: string[]): RuleClassification | undefined {
   if (attrs.policy !== 'deny')
     return undefined
   if (attrs.qualifiers.length > 0)
     return { kind: 'skip' }
-  const groups = rule.subject === undefined
+  // an empty, null or non-string subject names nobody, so the deny matches everyone
+  const subjectless = attrs.subjects.length === 0
+  const domains = attrs.domains.filter(d => !d.includes(GROUP_PLACEHOLDER) || isLeadingPlaceholder(d))
+  const unmodeled = domains.length < attrs.domains.length
+    || (attrs.domains.length === 0 && isSet(rule.domain_regex))
+  const notedGroups = !unmodeled
+    ? []
+    : subjectless
+      ? knownGroups
+      : [
+          ...new Set(attrs.groups),
+        ]
+  const groups = subjectless
     ? undefined
     : wholeSubjectGroups(rule.subject)
-  return { kind: 'deny', domains: attrs.domains, groups }
+  return {
+    kind: 'deny',
+    domains,
+    groups,
+    notedGroups,
+  }
 }
 
-function matchPlaceholder(attrs: RuleAttributes): RuleClassification | undefined {
-  if (attrs.placeholderDomains.length === 0 || attrs.subjects.length > 0 || attrs.qualifiers.length > 0)
+// a subject that is present but holds no string is a typo rather than
+// everyone, so only an absent or empty one grants every group
+function isAbsentSubject(subject: unknown): boolean {
+  return !isSet(subject) || (Array.isArray(subject) && subject.length === 0)
+}
+
+function matchPlaceholder(rule: AccessRule, attrs: RuleAttributes): RuleClassification | undefined {
+  if (attrs.placeholderDomains.length === 0 || !isAbsentSubject(rule.subject) || attrs.qualifiers.length > 0)
+    return undefined
+  // a {group} past the leading label falls through to an unparsed note
+  if (!attrs.placeholderDomains.every(isLeadingPlaceholder))
     return undefined
   // a plain domain listed beside a {group} one is matched for every group, like a rule for everyone
   return {
@@ -223,8 +267,7 @@ function matchPlaceholder(attrs: RuleAttributes): RuleClassification | undefined
 // domain_regex is OR'd with domain, so the literal domains still match — the
 // regex itself isn't modeled
 function matchEveryone(rule: AccessRule, attrs: RuleAttributes): RuleClassification | undefined {
-  const everyone = attrs.subjects.length === 0
-    && rule.subject === undefined
+  const everyone = isAbsentSubject(rule.subject)
     && attrs.placeholderDomains.length === 0
     && attrs.qualifiers.length === 0
     && attrs.domains.length > 0
@@ -246,7 +289,7 @@ function matchModeled(rule: AccessRule, attrs: RuleAttributes): RuleClassificati
   const modeled = attrs.placeholderDomains.length === 0
     && groups.length > 0
     && attrs.qualifiers.length === 0
-    && rule.domain_regex === undefined
+    && !isSet(rule.domain_regex)
     && attrs.domains.length > 0
 
   return modeled
@@ -274,8 +317,8 @@ function matchUnparsed(attrs: RuleAttributes, knownGroups: string[]): RuleClassi
 // mirrors access-preview.parser.spec.ts's describe blocks one-for-one, in the same precedence order
 function classifyAccessRule(rule: AccessRule, knownGroups: string[]): RuleClassification {
   const attrs = parseRuleAttributes(rule)
-  return matchDeny(rule, attrs)
-    ?? matchPlaceholder(attrs)
+  return matchDeny(rule, attrs, knownGroups)
+    ?? matchPlaceholder(rule, attrs)
     ?? matchEveryone(rule, attrs)
     ?? matchNoGroupSkip(attrs)
     ?? matchModeled(rule, attrs)
@@ -289,7 +332,16 @@ function applyDeny(domains: string[], groups: string[] | undefined, decided: Dec
 
 type GrantSource = GroupAccessPreview['domains'][number]['source']
 
+// an earlier grant of this group already matched every request to the domain,
+// so first-match never reaches a later rule for it
+function isAlreadyGranted(group: string, domain: string, previewFor: PreviewFor): boolean {
+  const target = domain.toLowerCase()
+  return previewFor(group).domains.some(grant => domainCovers(grant.domain.toLowerCase(), target))
+}
+
 function applyGrant(group: string, domain: string, policy: string, source: GrantSource, decided: DecidedDomains, previewFor: PreviewFor): void {
+  if (isAlreadyGranted(group, domain, previewFor))
+    return
   const { allowed, carvedOut } = decided.decideGrant(group, domain)
   if (!allowed)
     return
@@ -309,21 +361,14 @@ function applyGrant(group: string, domain: string, policy: string, source: Grant
 
 function applyPlaceholderGrants(domains: string[], policy: string, knownGroups: string[], decided: DecidedDomains, previewFor: PreviewFor): void {
   for (const group of knownGroups) {
-    for (const domain of domains.map(d => d.replaceAll(GROUP_PLACEHOLDER, group)))
+    for (const domain of domains.map(d => substituteLeadingPlaceholder(d, group)))
       applyGrant(group, domain, policy, 'group-placeholder', decided, previewFor)
   }
 }
 
-// an earlier grant of this group already matched every request to the domain,
-// so first-match never reaches a later rule for it
-function isAlreadyGranted(group: string, domain: string, previewFor: PreviewFor): boolean {
-  const target = domain.toLowerCase()
-  return previewFor(group).domains.some(grant => domainCovers(grant.domain.toLowerCase(), target))
-}
-
 function applyEveryoneGrant(domains: string[], policy: string, knownGroups: string[], decided: DecidedDomains, previewFor: PreviewFor): void {
   for (const domain of domains) {
-    for (const group of knownGroups.filter(g => !isAlreadyGranted(g, domain, previewFor)))
+    for (const group of knownGroups)
       applyGrant(group, domain, policy, 'everyone', decided, previewFor)
   }
   // recorded only after the whole rule, so its own domains don't carve each other out
@@ -352,6 +397,7 @@ function collectAccessRuleGrants(rules: AccessRule[], knownGroups: string[], pre
         continue
       case 'deny':
         applyDeny(classification.domains, classification.groups, decided)
+        applyUnparsedRuleNotes(classification.notedGroups, rule, previewFor)
         continue
       case 'placeholder':
         applyPlaceholderGrants(classification.domains, classification.policy, knownGroups, decided, previewFor)
