@@ -10,6 +10,8 @@ defineProps<{
   tokenExpired: boolean
   copied: boolean
   sending: boolean
+  /** The create asked for an email whose background send has not recorded an outcome yet. */
+  emailPending?: boolean
   error: string
   loading: boolean
 }>()
@@ -33,6 +35,9 @@ defineEmits<{ revoke: [], send: [], copy: [] }>()
   <p v-else-if="token.email_error" class="reset-link-email-failed" :title="token.email_error">
     ✗ Email failed — share the link directly
   </p>
+  <p v-else-if="emailPending" class="reset-link-email-pending">
+    Sending…
+  </p>
   <FormError :message="error" />
   <div class="tg-form-actions">
     <button class="tg-btn tg-btn-danger" :disabled="loading" @click="$emit('revoke')">
@@ -41,7 +46,7 @@ defineEmits<{ revoke: [], send: [], copy: [] }>()
     <button
       v-if="!tokenExpired"
       class="tg-btn tg-btn-ghost"
-      :disabled="sending"
+      :disabled="sending || emailPending"
       @click="$emit('send')"
     >
       {{ sending ? 'Sending...' : (token.email_sent_at ? 'Resend' : 'Send') }}
@@ -69,6 +74,12 @@ defineEmits<{ revoke: [], send: [], copy: [] }>()
 .reset-link-email-sent {
   font-size: var(--tg-font-xs);
   color: var(--tg-success);
+  margin: 0;
+}
+
+.reset-link-email-pending {
+  font-size: var(--tg-font-xs);
+  color: var(--tg-text-secondary);
   margin: 0;
 }
 

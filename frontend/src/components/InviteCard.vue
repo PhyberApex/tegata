@@ -26,6 +26,8 @@ const props = defineProps<{
   variant: 'active' | 'used' | 'expired'
   copiedId: string | null
   sendingId: string | null
+  /** The create asked for an email whose background send has not recorded an outcome yet. */
+  emailPending?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -76,6 +78,8 @@ function emailStatusItem(): MetaItem | null {
       title: props.invite.email_error,
     }
   }
+  if (props.emailPending)
+    return { key: 'email-status', class: 'invite-email-pending', text: 'Sending…' }
   return null
 }
 
@@ -122,7 +126,7 @@ function sendActionItem(): ActionItem | null {
       ? 'Sending...'
       : (props.invite.email_sent_at ? 'Resend' : 'Send'),
     class: 'tg-btn tg-btn-ghost',
-    disabled: props.sendingId === props.invite.id,
+    disabled: props.sendingId === props.invite.id || props.emailPending,
     onClick: () => emit('send', props.invite),
   }
 }
@@ -261,6 +265,10 @@ const view = computed<VariantView>(() => {
 
 .invite-email-sent {
   color: var(--tg-success);
+}
+
+.invite-email-pending {
+  color: var(--tg-text-secondary);
 }
 
 .invite-email-failed {

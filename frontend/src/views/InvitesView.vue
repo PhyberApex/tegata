@@ -7,6 +7,7 @@ import DeleteConfirmModal from '../components/DeleteConfirmModal.vue'
 import InviteSection from '../components/InviteSection.vue'
 import QrCodeModal from '../components/QrCodeModal.vue'
 import { useApi } from '../composables/useApi'
+import { useEmailDeliveryPolling } from '../composables/useEmailDeliveryPolling'
 import { useModalAction } from '../composables/useModalAction'
 import { inviteUrl } from '../utils/invites'
 import { timeUntilExpiry } from '../utils/time'
@@ -66,6 +67,8 @@ async function loadData() {
 
 onMounted(loadData)
 
+const emailDelivery = useEmailDeliveryPolling(loadData, () => invites.value)
+
 function openCreate() {
   createForm.value = {
     groups: ['users'],
@@ -100,9 +103,12 @@ function buildInvitePayload(form: typeof createForm.value) {
 
 async function handleCreate() {
   await modalAction.run(async () => {
-    await api.post('/api/invites', buildInvitePayload(createForm.value))
+    const payload = buildInvitePayload(createForm.value)
+    const created = await api.post<Invite>('/api/invites', payload)
     showCreateModal.value = false
     await loadData()
+    if ('sendEmail' in payload)
+      emailDelivery.track(created.id)
   }, 'Failed to create invite')
 }
 
@@ -190,6 +196,7 @@ async function copyLink(invite: Invite) {
       variant="active"
       :copied-id="copiedId"
       :sending-id="sendingId"
+      :is-email-pending="emailDelivery.isPending"
       @qr="invite => qrTarget = invite"
       @copy="copyLink"
       @send="handleSend"
