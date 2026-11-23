@@ -10,8 +10,8 @@ packages:
   - frontend
   - shared
 
-# Only the two native modules the backend needs may run their install scripts;
-# everything else is installed without executing anything.
+# Only the entries set to true below may run their install scripts; everything
+# else (including the entries set to false) is installed without executing anything.
 allowBuilds:
   '@nestjs/core': true
   '@swc/core': false

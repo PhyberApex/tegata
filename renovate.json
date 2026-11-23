@@ -26,10 +26,19 @@
       "enabled": false
     },
     {
-      "description": "A dependency or base-image bump changes the published image, so it is a fix: release-please cuts a patch release for it. Workflow-action bumps stay chores and release nothing.",
+      "description": "A runtime dependency bump changes the published image, so it is a fix: release-please cuts a patch release for it. devDependencies and workflow-action bumps fall back to chore and release nothing.",
       "matchManagers": [
-        "dockerfile",
         "npm"
+      ],
+      "matchDepTypes": [
+        "dependencies"
+      ],
+      "semanticCommitType": "fix"
+    },
+    {
+      "description": "A base-image bump changes the published image too, so it is a fix as well.",
+      "matchManagers": [
+        "dockerfile"
       ],
       "semanticCommitType": "fix"
     }
