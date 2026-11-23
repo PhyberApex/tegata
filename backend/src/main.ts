@@ -7,6 +7,7 @@ import helmet from 'helmet'
 import { AppModule } from './app.module'
 import { DynamicLogger, installFetchLogger, setDynamicLoggerInstance } from './common'
 import { assertArgon2Options } from './config/argon2-options'
+import { helmetOptions } from './config/helmet-options'
 import { parseTrustProxy } from './config/parse-trust-proxy'
 import { assertSecrets } from './config/secrets'
 import { warnIfInsecureCookies } from './config/secure-cookies'
@@ -38,7 +39,8 @@ async function bootstrap() {
   // req.protocol read the forwarded headers correctly
   app.getHttpAdapter().getInstance().set('trust proxy', trustProxy)
 
-  app.use(helmet())
+  // Same NODE_ENV source as the cookie flag, so headers and cookies agree on HTTP vs HTTPS
+  app.use(helmet(helmetOptions(process.env.NODE_ENV)))
   app.use(cookieParser())
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }))
   app.setGlobalPrefix('api', {
