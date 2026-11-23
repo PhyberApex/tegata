@@ -170,7 +170,7 @@ interface RuleAttributes {
 type RuleClassification
   = | { kind: 'skip' }
     | { kind: 'deny', domains: string[], groups: string[] | undefined }
-    | { kind: 'placeholder', domains: string[], policy: string }
+    | { kind: 'placeholder', domains: string[], literalDomains: string[], policy: string }
     | { kind: 'everyone', domains: string[], policy: string }
     | { kind: 'modeled', domains: string[], groups: string[], policy: string }
     | { kind: 'unparsed', groups: string[] }
@@ -209,7 +209,13 @@ function matchDeny(rule: AccessRule, attrs: RuleAttributes): RuleClassification 
 function matchPlaceholder(attrs: RuleAttributes): RuleClassification | undefined {
   if (attrs.placeholderDomains.length === 0 || attrs.subjects.length > 0 || attrs.qualifiers.length > 0)
     return undefined
-  return { kind: 'placeholder', domains: attrs.placeholderDomains, policy: attrs.policy }
+  // a plain domain listed beside a {group} one is matched for every group, like a rule for everyone
+  return {
+    kind: 'placeholder',
+    domains: attrs.placeholderDomains,
+    literalDomains: attrs.domains.filter(d => !d.includes(GROUP_PLACEHOLDER)),
+    policy: attrs.policy,
+  }
 }
 
 // a rule naming no subject and no qualifier matches every group's request to its
@@ -349,6 +355,7 @@ function collectAccessRuleGrants(rules: AccessRule[], knownGroups: string[], pre
         continue
       case 'placeholder':
         applyPlaceholderGrants(classification.domains, classification.policy, knownGroups, decided, previewFor)
+        applyEveryoneGrant(classification.literalDomains, classification.policy, knownGroups, decided, previewFor)
         continue
       case 'everyone':
         applyEveryoneGrant(classification.domains, classification.policy, knownGroups, decided, previewFor)

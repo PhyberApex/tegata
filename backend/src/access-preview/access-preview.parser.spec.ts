@@ -182,6 +182,31 @@ describe('buildAccessPreviews', () => {
       ])
     })
 
+    it('should grant a subjectless rule\'s literal domains listed beside a placeholder domain', () => {
+      const config = {
+        access_control: {
+          rules: [
+            {
+              domain: ['{group}.example.com', 'wiki.example.com'],
+              policy: 'one_factor',
+            },
+            { domain: 'wiki.example.com', subject: 'group:family', policy: 'two_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family', 'guests'])
+
+      expect(previewFor(previews, 'family').domains).toEqual([
+        { domain: 'family.example.com', policy: 'one_factor', source: 'group-placeholder' },
+        { domain: 'wiki.example.com', policy: 'one_factor', source: 'everyone' },
+      ])
+      expect(previewFor(previews, 'guests').domains).toEqual([
+        { domain: 'guests.example.com', policy: 'one_factor', source: 'group-placeholder' },
+        { domain: 'wiki.example.com', policy: 'one_factor', source: 'everyone' },
+      ])
+    })
+
     it('should skip a subjectless rule with qualifiers or a non-group subject', () => {
       const config = {
         access_control: {
