@@ -26,7 +26,6 @@ const props = defineProps<{
   variant: 'active' | 'used' | 'expired'
   copiedId: string | null
   sendingId: string | null
-  /** The create asked for an email whose background send has not recorded an outcome yet. */
   emailPending?: boolean
 }>()
 

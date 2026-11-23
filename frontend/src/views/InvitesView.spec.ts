@@ -291,6 +291,31 @@ describe('invitesView email delivery after create', () => {
     expect(inviteListRequests()).toBe(afterCreate + 4)
   })
 
+  it('keeps polling for a new invite that a stale reload left out of the list', async () => {
+    respondWith({
+      invites: [
+        [],
+        [],
+        [created],
+        [
+          {
+            ...created,
+            email_sent_at: new Date().toISOString(),
+          },
+        ],
+      ],
+      create: created,
+    })
+    const wrapper = await mountView()
+
+    await createInvite(wrapper, { sendEmail: true })
+    await advance(1000)
+    expect(wrapper.text()).toContain('Sending…')
+
+    await advance(3000)
+    expect(wrapper.text()).toContain('✓ Emailed')
+  })
+
   it('does not poll when the email was not requested', async () => {
     respondWith({
       invites: [

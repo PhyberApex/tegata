@@ -10,7 +10,6 @@ defineProps<{
   tokenExpired: boolean
   copied: boolean
   sending: boolean
-  /** The create asked for an email whose background send has not recorded an outcome yet. */
   emailPending?: boolean
   error: string
   loading: boolean

@@ -33,12 +33,13 @@ export function useEmailDeliveryPolling<T extends EmailDeliveryRow>(
     timer = null
   }
 
-  /** Drops ids whose row has settled or is gone from the list. */
+  // An id missing from the list is kept, not dropped: an older reload landing after the create's can briefly omit
+  // the new row, and dropping it would stop polling for it. A row that is really gone just runs out of attempts.
   function prune() {
     const byId = new Map(rows().map(row => [row.id, row]))
     const remaining = [...pendingIds.value].filter((id) => {
       const row = byId.get(id)
-      return row !== undefined && !isSettled(row)
+      return row === undefined || !isSettled(row)
     })
     if (remaining.length !== pendingIds.value.size)
       pendingIds.value = new Set(remaining)
@@ -75,7 +76,6 @@ export function useEmailDeliveryPolling<T extends EmailDeliveryRow>(
     scheduleNext()
   }
 
-  /** Whether the row's requested email is still being sent, as far as the latest list knows. */
   function isPending(row: T): boolean {
     return pendingIds.value.has(row.id) && !isSettled(row)
   }
@@ -85,5 +85,5 @@ export function useEmailDeliveryPolling<T extends EmailDeliveryRow>(
     stop()
   })
 
-  return { pendingIds, track, isPending }
+  return { track, isPending }
 }
