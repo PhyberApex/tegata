@@ -3,7 +3,7 @@ import { NotFoundException, ServiceUnavailableException, UnauthorizedException }
 import { Test, TestingModule } from '@nestjs/testing'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProfileGuard, ProfileRequest } from '../auth/profile.guard'
-import { UsersService } from '../users/users.service'
+import { UnverifiablePasswordHashException, UsersService } from '../users/users.service'
 import { ProfileController } from './profile.controller'
 
 describe('profileController', () => {
@@ -128,6 +128,16 @@ describe('profileController', () => {
         controller.changePassword(requestFor('alice'), { currentPassword: 'old-pass', newPassword: 'new-password' }),
       ).rejects.toThrow(ServiceUnavailableException)
 
+      expect(mockUsersService.resetPassword).not.toHaveBeenCalled()
+    })
+
+    it('should propagate UnverifiablePasswordHashException instead of "Current password is incorrect"', async () => {
+      mockUsersService.verifyPassword.mockRejectedValue(new UnverifiablePasswordHashException())
+
+      const change = controller.changePassword(requestFor('alice'), { currentPassword: 'old-pass', newPassword: 'new-password' })
+
+      await expect(change).rejects.toThrow(UnverifiablePasswordHashException)
+      await expect(change).rejects.not.toThrow('Current password is incorrect')
       expect(mockUsersService.resetPassword).not.toHaveBeenCalled()
     })
   })

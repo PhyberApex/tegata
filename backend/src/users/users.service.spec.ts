@@ -9,7 +9,7 @@ import * as yaml from 'js-yaml'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DatabaseService } from '../database/database.service'
 import { GroupsService } from '../groups/groups.service'
-import { UsersService } from './users.service'
+import { UnverifiablePasswordHashException, UsersService } from './users.service'
 
 vi.mock('argon2', () => ({
   hash: vi.fn().mockResolvedValue('$argon2id$mocked-hash'),
@@ -772,6 +772,34 @@ describe('usersService', () => {
       readFileSyncMock.mockImplementation(() => { throw new Error('permission denied') })
 
       await expect(service.verifyPassword('alice', 'anything')).rejects.toThrow(ServiceUnavailableException)
+    })
+
+    /** USERS_YAML with alice's `password:` line replaced — `null` drops the key. */
+    function aliceWithPassword(passwordLine: string | null) {
+      const replaced = USERS_YAML.replace('    password: "$argon2id$hash1"\n', passwordLine === null
+        ? ''
+        : `    ${passwordLine}\n`)
+      expect(replaced).not.toBe(USERS_YAML)
+      useInMemoryUsersFile(replaced)
+    }
+
+    it.each([
+      ['a sha512-crypt hash', 'password: "$6$rounds=50000$salt$digest"'],
+      ['a bcrypt hash', 'password: "$2b$12$abcdefghijklmnopqrstuuexample"'],
+      ['a pbkdf2 hash', 'password: "$pbkdf2-sha512$310000$salt$digest"'],
+      ['a missing password', null],
+      ['a non-string password', 'password: [not, a, hash]'],
+    ])('should reject with UnverifiablePasswordHashException for %s, without calling argon2', async (_, passwordLine) => {
+      aliceWithPassword(passwordLine)
+
+      await expect(service.verifyPassword('alice', 'correct-password')).rejects.toThrow(UnverifiablePasswordHashException)
+      expect(verifyMock).not.toHaveBeenCalled()
+    })
+
+    it('should reject with UnverifiablePasswordHashException when argon2 cannot parse an $argon2 hash', async () => {
+      verifyMock.mockRejectedValueOnce(new TypeError('params must be in the format name=value'))
+
+      await expect(service.verifyPassword('alice', 'correct-password')).rejects.toThrow(UnverifiablePasswordHashException)
     })
   })
 
