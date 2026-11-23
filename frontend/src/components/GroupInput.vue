@@ -28,18 +28,15 @@ function addGroup(group: string) {
   newGroup.value = ''
 }
 
-// The removed chip's button unmounts while focused, dropping focus to <body>;
-// hand it to the next chip, else the previous one, else the add input.
+// The removed tag's button unmounts while focused, dropping focus to <body>;
+// hand it to the next tag, else the previous one, else the add input.
 async function removeGroup(group: string) {
   const index = props.modelValue.indexOf(group)
   const remaining = props.modelValue.filter(g => g !== group)
   const target = remaining[index] ?? remaining[index - 1]
   emit('update:modelValue', remaining)
   await nextTick()
-  const next = target !== undefined
-    ? removeButtons.get(target)
-    : undefined
-  ;(next ?? addInput.value)?.focus()
+  ;((target && removeButtons.get(target)) || addInput.value)?.focus()
 }
 
 function handleKeydown(e: KeyboardEvent) {
