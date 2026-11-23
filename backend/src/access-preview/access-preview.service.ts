@@ -9,6 +9,21 @@ import { getGuardedGroups } from '../users/guarded-groups'
 import { buildConfigNotes } from './access-preview.config-notes'
 import { buildAccessPreviews } from './access-preview.parser'
 
+// A YAMLException's message embeds a snippet of the surrounding source lines,
+// and configuration.yml usually inlines secrets — so build the reason from the
+// bare reason and position only, never from err.message or mark.snippet.
+function describeReadError(err: unknown): string {
+  if (err instanceof yaml.YAMLException) {
+    const position = err.mark
+      ? ` (line ${err.mark.line + 1}, column ${err.mark.column + 1})`
+      : ''
+    return `Authelia configuration is not valid YAML${position}: ${err.reason}`
+  }
+  return `Could not read Authelia configuration: ${err instanceof Error
+    ? err.message
+    : String(err)}`
+}
+
 @Injectable()
 export class AccessPreviewService {
   private readonly configPath: string
@@ -34,9 +49,7 @@ export class AccessPreviewService {
       parsed = yaml.load(readFileSync(this.configPath, 'utf-8'))
     }
     catch (err) {
-      const reason = `Could not read Authelia configuration: ${err instanceof Error
-        ? err.message
-        : String(err)}`
+      const reason = describeReadError(err)
       this.logger.warn(reason)
       return { available: false, reason, guardedGroups: this.guardedGroups }
     }
