@@ -8,7 +8,7 @@ import EditUserModal from '../components/EditUserModal.vue'
 import EnabledCountConfirmModal from '../components/EnabledCountConfirmModal.vue'
 import ResetLinkModal from '../components/ResetLinkModal.vue'
 import UserTable from '../components/UserTable.vue'
-import { computeEffectiveAccess, computeEmptiedGuardedGroups } from '../composables/effectiveAccess'
+import { computeEffectiveAccess, computeEmptiedGuardedGroups, haveGroupsChanged } from '../composables/effectiveAccess'
 import { confirmAccessDiffWithGuardFallback, useAccessDiffConfirm } from '../composables/useAccessDiffConfirm'
 import { isEnabledCountGuardError, useApi } from '../composables/useApi'
 import { useEnabledCountConfirm } from '../composables/useEnabledCountConfirm'
@@ -51,7 +51,9 @@ const editForm = ref<EditUserForm>({
   email: '',
   groups: [],
 })
-const originalEditGroups = ref<string[]>([])
+type EditUserFields = Omit<EditUserForm, 'username'>
+/** What is on file for the user being edited; the PATCH sends only what differs from it. */
+const originalEdit = ref<EditUserFields>({ displayname: '', email: '', groups: [] })
 const resetLinkTarget = ref('')
 const resetLinkForm = ref<ResetLinkForm>({ expiresInDays: 1, sendEmail: false })
 const resetLinkCopied = ref(false)
@@ -106,13 +108,19 @@ function openCreate() {
 }
 
 function openEdit(user: User) {
+  // A user in the Authelia Users Database may have no email; the form treats that as empty.
+  const email = user.email ?? ''
   editForm.value = {
     username: user.username,
     displayname: user.displayname,
-    email: user.email,
+    email,
     groups: [...user.groups],
   }
-  originalEditGroups.value = [...user.groups]
+  originalEdit.value = {
+    displayname: user.displayname,
+    email,
+    groups: [...user.groups],
+  }
   modalAction.error.value = ''
   showEditModal.value = true
 }
@@ -143,16 +151,38 @@ async function handleCreate() {
   }, 'Failed to create user')
 }
 
-async function saveEditedUser(confirm: boolean) {
-  const { username, ...updates } = editForm.value
+/**
+ * Only the fields the admin changed: an untouched on-file value the backend rejects (an email such as
+ * admin@localhost in the Authelia Users Database) must not block saving the other fields.
+ */
+function changedEditFields(): Partial<EditUserFields> {
+  const changes: Partial<EditUserFields> = {}
+  if (editForm.value.displayname !== originalEdit.value.displayname)
+    changes.displayname = editForm.value.displayname
+  if (editForm.value.email !== originalEdit.value.email)
+    changes.email = editForm.value.email
+  if (haveGroupsChanged(originalEdit.value.groups, editForm.value.groups))
+    changes.groups = [...editForm.value.groups]
+  return changes
+}
+
+async function saveEditedUser(username: string, changes: Partial<EditUserFields>, confirm: boolean) {
   await api.patch(`/api/users/${encodeURIComponent(username)}`, confirm
-    ? { ...updates, confirm: true }
-    : updates)
+    ? { ...changes, confirm: true }
+    : changes)
   showEditModal.value = false
   await loadData()
 }
 
 async function handleEdit() {
+  const username = editForm.value.username
+  const changes = changedEditFields()
+  if (Object.keys(changes).length === 0) {
+    showEditModal.value = false
+    return
+  }
+  const save = (confirm: boolean) => saveEditedUser(username, changes, confirm)
+
   modalAction.loading.value = true
   modalAction.error.value = ''
   try {
@@ -164,9 +194,9 @@ async function handleEdit() {
     )
     await accessDiffConfirm.requestSave(
       normalizedAccessPreview.value,
-      originalEditGroups.value,
+      originalEdit.value.groups,
       editForm.value.groups,
-      saveEditedUser,
+      save,
       emptiedGroups,
     )
   }
@@ -174,7 +204,7 @@ async function handleEdit() {
     if (isEnabledCountGuardError(err)) {
       showEditModal.value = false
       accessDiffConfirm.cancel()
-      enabledCountConfirm.open(err.message, () => saveEditedUser(true))
+      enabledCountConfirm.open(err.message, () => save(true))
     }
     else {
       modalAction.error.value = err instanceof Error
@@ -361,6 +391,7 @@ async function handleDelete() {
       :bundles="bundles"
       :available-groups="groups"
       :effective-access="editEffectiveAccess"
+      :email-required="originalEdit.email !== ''"
       :error="modalAction.error.value"
       :loading="modalAction.loading.value"
       :access-diff-show="accessDiffConfirm.show.value"
