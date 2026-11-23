@@ -34,8 +34,8 @@ function isTopMost(): boolean {
 let opener: HTMLElement | null = null
 
 // A text-selection drag that starts in the card and ends past its edge fires
-// click on the common ancestor, the overlay, so `.self` alone would close the
-// dialog. Only a click whose press also began on the backdrop closes it.
+// click on the common ancestor, the overlay, with the overlay as its target;
+// the press target is what tells that apart from a deliberate backdrop click.
 let pressedOnBackdrop = false
 
 function onOverlayMousedown(event: MouseEvent) {

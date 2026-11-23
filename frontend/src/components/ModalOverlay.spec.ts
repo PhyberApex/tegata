@@ -197,8 +197,6 @@ describe('modalOverlay', () => {
       target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
     }
 
-    // A drag released outside the card dispatches click on the common
-    // ancestor, the overlay, so the press target is what tells them apart.
     it('does not emit close when the press began inside the dialog', async () => {
       const wrapper = mountModal()
       await nextTick()
