@@ -46,9 +46,15 @@ export class ProfileController {
     return { username, displayname, email }
   }
 
+  /**
+   * Hands `updateUser` an explicit `{ displayname, email }` rather than the DTO, so a self-service body can
+   * never reach `groups` or `disabled` even if the global pipe stops whitelisting; and answers with the same
+   * narrowed shape as `get()`.
+   */
   @Patch()
-  update(@Req() req: ProfileRequest, @Body() dto: UpdateProfileDto) {
-    return this.usersService.updateUser(req.username, dto)
+  update(@Req() req: ProfileRequest, @Body() dto: UpdateProfileDto): OwnProfile {
+    const { username, displayname, email } = this.usersService.updateUser(req.username, { displayname: dto.displayname, email: dto.email })
+    return { username, displayname, email }
   }
 
   @Post('password')

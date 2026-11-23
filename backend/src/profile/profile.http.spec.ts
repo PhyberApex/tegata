@@ -39,7 +39,13 @@ describe('profile over HTTP', () => {
         disabled: false,
       },
     })),
-    updateUser: vi.fn(),
+    updateUser: vi.fn((username: string) => ({
+      username,
+      displayname: 'Bob',
+      email: 'bob@example.com',
+      groups: ['users'],
+      disabled: false,
+    })),
     verifyPassword: vi.fn(async () => true),
     resetPassword: vi.fn(async () => undefined),
   }
@@ -147,6 +153,26 @@ describe('profile over HTTP', () => {
 
     expect(res.status).toBe(409)
     expect(((await res.json()) as { message: string }).message).toBe('That email address is already in use')
+  })
+
+  it('should pass only displayname and email to updateUser and answer without groups or disabled', async () => {
+    const res = await send('PATCH', '/profile', {
+      email: 'bob@example.com',
+      groups: ['tegata'],
+      disabled: false,
+    })
+
+    expect(res.status).toBe(200)
+    expect(usersService.updateUser.mock.calls).toStrictEqual([
+      [
+        'bob',
+        { displayname: undefined, email: 'bob@example.com' },
+      ],
+    ])
+    const body = (await res.json()) as Record<string, unknown>
+    expect(body).toStrictEqual({ username: 'bob', displayname: 'Bob', email: 'bob@example.com' })
+    expect(body).not.toHaveProperty('groups')
+    expect(body).not.toHaveProperty('disabled')
   })
 
   it.each(['', '   '])('should answer 400 to the blank displayname %j and change nothing', async (displayname) => {
