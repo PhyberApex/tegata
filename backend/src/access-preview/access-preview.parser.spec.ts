@@ -409,6 +409,24 @@ describe('buildAccessPreviews', () => {
       ])
     })
 
+    it('should note a narrower wildcard deny once however many grants it carves out of', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: '*.a.example.com', policy: 'deny' },
+            { domain: '*.example.com', subject: 'group:family', policy: 'one_factor' },
+            { domain: '*.example.com', subject: 'group:family', policy: 'two_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family'])
+
+      expect(previewFor(previews, 'family').notes).toEqual([
+        '*.example.com is granted except *.a.example.com, which an earlier deny rule decides',
+      ])
+    })
+
     it('should honour a deny that follows the grant', () => {
       const config = {
         access_control: {

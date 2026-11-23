@@ -74,16 +74,18 @@ type PreviewFor = (group: string) => GroupAccessPreview
 
 const EVERYONE = '\u0000everyone'
 
-const WILDCARD_PREFIX = '*.'
+const WILDCARD = '*'
+const WILDCARD_PREFIX = `${WILDCARD}.`
 
 // Authelia matches a domain exactly (case-insensitive), or — for a pattern with
-// a leading `*.` — any subdomain of the rest. Wildcard against wildcard covers
-// when `pattern`'s suffix is the same as or broader than `domain`'s
-function domainCovers(pattern: string, domain: string): boolean {
-  if (pattern === domain)
+// a leading `*.` — any subdomain of the rest. Either side may be a wildcard, so
+// this answers whether every request `inner` matches is also matched by `outer`
+function domainCovers(outer: string, inner: string): boolean {
+  if (outer === inner)
     return true
-  return pattern.startsWith(WILDCARD_PREFIX)
-    && domain.endsWith(pattern.slice(WILDCARD_PREFIX.length - 1))
+  // keep the dot, so `*.example.com` doesn't reach the apex or `notexample.com`
+  const subdomainSuffix = outer.slice(WILDCARD.length)
+  return outer.startsWith(WILDCARD_PREFIX) && inner.endsWith(subdomainSuffix)
 }
 
 interface DenyEntry {
@@ -91,7 +93,7 @@ interface DenyEntry {
   pattern: string
 }
 
-interface DenyCheck {
+interface GrantDecision {
   allowed: boolean
   // earlier denies the grant's wildcard is broader than: they still decide
   // their own domains, so the grant reaches everything but those
@@ -124,7 +126,7 @@ class DeniedDomains {
     }
   }
 
-  check(group: string, domain: string): DenyCheck {
+  decideGrant(group: string, domain: string): GrantDecision {
     const target = domain.toLowerCase()
     const applicable = this.entries.filter(e => e.group === EVERYONE || e.group === group)
     if (applicable.some(e => domainCovers(e.pattern, target)))
@@ -244,14 +246,19 @@ function applyDeny(domains: string[], groups: string[] | undefined, denied: Deni
     denied.deny(domain, groups)
 }
 
-function applyGrant(group: string, domain: string, policy: string, source: GroupAccessPreview['domains'][number]['source'], denied: DeniedDomains, previewFor: PreviewFor): void {
-  const { allowed, carvedOut } = denied.check(group, domain)
+type GrantSource = GroupAccessPreview['domains'][number]['source']
+
+function applyGrant(group: string, domain: string, policy: string, source: GrantSource, denied: DeniedDomains, previewFor: PreviewFor): void {
+  const { allowed, carvedOut } = denied.decideGrant(group, domain)
   if (!allowed)
     return
   const preview = previewFor(group)
   preview.domains.push({ domain, policy, source })
-  if (carvedOut.length > 0)
-    preview.notes.push(`${domain} is granted except ${carvedOut.join(', ')}, which an earlier deny rule decides`)
+  if (carvedOut.length === 0)
+    return
+  const note = `${domain} is granted except ${carvedOut.join(', ')}, which an earlier deny rule decides`
+  if (!preview.notes.includes(note))
+    preview.notes.push(note)
 }
 
 function applyPlaceholderGrants(domains: string[], policy: string, knownGroups: string[], denied: DeniedDomains, previewFor: PreviewFor): void {
