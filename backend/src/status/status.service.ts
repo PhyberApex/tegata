@@ -32,12 +32,30 @@ export class StatusService {
   }
 
   private async readAutheliaWriteStatus(): Promise<AutheliaWriteStatus> {
+    let ageHours: number
     try {
       const s = await stat(this.autheliaUsersFile)
-      return { ageHours: (Date.now() - s.mtimeMs) / 3_600_000, ok: true }
+      ageHours = (Date.now() - s.mtimeMs) / 3_600_000
     }
     catch {
       return { ageHours: null, ok: false }
+    }
+    return {
+      ageHours,
+      ok: this.isUsersDatabaseReadable(),
+    }
+  }
+
+  /**
+   * The same Unreadable Users Database rule `/api/health` uses (`UsersService.getReadability()`):
+   * an existing file that is invalid YAML, empty, missing its `users` mapping or not readable is not ok.
+   */
+  private isUsersDatabaseReadable(): boolean {
+    try {
+      return this.users.getReadability().readable
+    }
+    catch {
+      return false
     }
   }
 }
