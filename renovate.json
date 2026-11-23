@@ -26,7 +26,7 @@
       "enabled": false
     },
     {
-      "description": "A runtime dependency bump changes the published image, so it is a fix: release-please cuts a patch release for it. devDependencies and workflow-action bumps fall back to chore and release nothing.",
+      "description": "A runtime-dependency bump changes what the published image runs, so it is a fix: release-please cuts a patch release for it. devDependency and workflow-action bumps fall back to config:recommended's chore and release nothing.",
       "matchManagers": [
         "npm"
       ],
