@@ -1,12 +1,13 @@
 import type { AutheliaWriteStatus, HomepageStatus } from './status.types'
 import { stat } from 'node:fs/promises'
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { InvitesService, isPendingInvite } from '../invites/invites.service'
 import { UsersService } from '../users/users.service'
 
 @Injectable()
 export class StatusService {
+  private readonly logger = new Logger(StatusService.name)
   private readonly autheliaUsersFile: string
 
   constructor(
@@ -47,14 +48,15 @@ export class StatusService {
   }
 
   /**
-   * The same Unreadable Users Database rule `/api/health` uses (`UsersService.getReadability()`):
-   * an existing file that is invalid YAML, empty, missing its `users` mapping or not readable is not ok.
+   * Delegates to `UsersService.getReadability()`, the Unreadable Users Database rule `/api/health` uses,
+   * so the widget cannot show a healthy, empty install while every write is being refused.
    */
   private isUsersDatabaseReadable(): boolean {
     try {
       return this.users.getReadability().readable
     }
-    catch {
+    catch (err) {
+      this.logger.warn(`Status: users database readability could not be checked: ${err}`)
       return false
     }
   }
