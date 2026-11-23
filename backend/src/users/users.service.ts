@@ -22,6 +22,13 @@ interface UsersDatabase {
   users: Record<string, AutheliaUser>
 }
 
+/**
+ * Reads every plain scalar as a string except `null` and booleans (so `disabled: true` still works), the way
+ * Authelia's typed fields do. The default schema would resolve `007:` to `7` and `0042` to `42`, and the next
+ * write would persist the rewritten value. Writes keep js-yaml's default dump schema, which quotes such strings.
+ */
+const LOAD_SCHEMA = yaml.FAILSAFE_SCHEMA.withTags(yaml.nullCoreTag, yaml.boolCoreTag)
+
 /** Own-key lookup: usernames like `constructor` or `__proto__` must not resolve to Object.prototype members. */
 function lookupUser(users: Record<string, AutheliaUser>, username: string): AutheliaUser | undefined {
   return Object.hasOwn(users, username)
@@ -122,7 +129,7 @@ export class UsersService implements OnModuleInit {
   private parseDatabaseContent(content: string): DatabaseReadResult {
     let parsed: unknown
     try {
-      parsed = yaml.load(content)
+      parsed = yaml.load(content, { schema: LOAD_SCHEMA })
     }
     catch (err) {
       return { readable: false, kind: 'invalid-yaml', reason: `The users database file could not be parsed: ${err}` }

@@ -858,6 +858,101 @@ describe('usersService', () => {
     })
   })
 
+  describe('numeric-looking usernames and values', () => {
+    const NUMERIC_LOOKING_YAML = `
+users:
+  007:
+    displayname: James Bond
+    password: "$argon2id$hash1"
+    email: bond@example.com
+    phone_number: +4915112345678
+    phone_extension: 0042
+    badge: 12345678901234567890
+    version: 1.10
+    groups:
+      - agents
+      - users
+  bob:
+    displayname: Bob Jones
+    password: "$argon2id$hash2"
+    email: bob@example.com
+    groups:
+      - users
+  mallory:
+    displayname: Mallory
+    password: "$argon2id$hash3"
+    email: mallory@example.com
+    groups:
+      - users
+    disabled: true
+`
+
+    /** The users mapping of the file as it now is on disk, read without any numeric resolution. */
+    function rawUsersOnDisk(): Record<string, Record<string, unknown>> {
+      const content = readFileSyncMock('/tmp/users.yml') as string
+      return (yaml.load(content, { schema: yaml.FAILSAFE_SCHEMA }) as { users: Record<string, Record<string, unknown>> }).users
+    }
+
+    function expectNumericLookingValuesKept() {
+      const users = rawUsersOnDisk()
+      expect(Object.keys(users)).toEqual(['007', 'bob', 'mallory'])
+      expect(users['007']).toMatchObject({
+        phone_number: '+4915112345678',
+        phone_extension: '0042',
+        badge: '12345678901234567890',
+        version: '1.10',
+      })
+    }
+
+    beforeEach(() => {
+      useInMemoryUsersFile(NUMERIC_LOOKING_YAML)
+    })
+
+    it('should list the user as 007 and find it by that name', () => {
+      expect(service.listUsers().map(user => user.username)).toEqual(['007', 'bob', 'mallory'])
+      expect(service.getUser('007')).toMatchObject({ username: '007', displayname: 'James Bond' })
+    })
+
+    it('should still read an unquoted disabled: true as disabled', () => {
+      expect(service.getUser('mallory')?.disabled).toBe(true)
+      expect(service.getUser('bob')?.disabled).toBe(false)
+    })
+
+    it('should keep the values unchanged through updateUser', () => {
+      service.updateUser('bob', { displayname: 'Robert Jones' })
+
+      expectNumericLookingValuesKept()
+      expect(service.getUser('007')).toMatchObject({ username: '007' })
+      expect(service.getUser('mallory')?.disabled).toBe(true)
+    })
+
+    it('should keep the values unchanged through resetPassword', async () => {
+      await service.resetPassword('007', 'newpassword1')
+
+      expectNumericLookingValuesKept()
+      expect(rawUsersOnDisk()['007'].password).toBe('$argon2id$mocked-hash')
+    })
+
+    it('should keep the values unchanged through removeGroupFromAllUsers', () => {
+      service.removeGroupFromAllUsers('agents')
+
+      expectNumericLookingValuesKept()
+      expect(service.getUser('007')?.groups).toEqual(['users'])
+    })
+
+    it('should write numeric-looking strings quoted, so other YAML parsers read them as strings too', () => {
+      service.updateUser('bob', { displayname: 'Robert Jones' })
+
+      const content = readFileSyncMock('/tmp/users.yml') as string
+      expect(content).toContain('"007":')
+      expect(content).toContain('phone_number: "+4915112345678"')
+      expect(content).toContain('phone_extension: "0042"')
+      expect(content).toContain('badge: "12345678901234567890"')
+      expect(content).toContain('version: "1.10"')
+      expect(content).toContain('disabled: true')
+    })
+  })
+
   describe('getUser', () => {
     it('should return the user when found', () => {
       expect(service.getUser('alice')).toEqual({
