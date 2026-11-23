@@ -12,6 +12,8 @@ const api = useApi()
 
 const token = route.params.token as string
 const valid = ref<boolean | null>(null)
+/** Set when the validate request itself failed (network, 5xx, 429): the link may be fine, so offer a retry, not the invalid card. */
+const loadError = ref(false)
 const invalidReason = ref('')
 const groups = ref<string[]>([])
 const success = ref(false)
@@ -91,9 +93,11 @@ const fields = computed<RegisterFieldSpec[]>(() => [
   },
 ])
 
-onMounted(async () => {
+async function validate() {
+  valid.value = null
+  loadError.value = false
   try {
-    const res = await api.get<InviteValidation>(`/api/invites/${token}/validate`)
+    const res = await api.get<InviteValidation>(`/api/invites/${encodeURIComponent(token)}/validate`)
     valid.value = res.valid
     invalidReason.value = res.reason ?? ''
     if (res.groups)
@@ -105,9 +109,11 @@ onMounted(async () => {
     lockedEmail.value = patch.lockedEmail
   }
   catch {
-    valid.value = false
+    loadError.value = true
   }
-})
+}
+
+onMounted(validate)
 
 async function handleRegister() {
   error.value = usernameError(form.value.username) || passwordMatchError(form.value)
@@ -116,7 +122,7 @@ async function handleRegister() {
 
   loading.value = true
   try {
-    await api.post(`/api/invites/${token}/redeem`, {
+    await api.post(`/api/invites/${encodeURIComponent(token)}/redeem`, {
       username: form.value.username,
       displayname: form.value.displayname,
       email: form.value.email,
@@ -137,8 +143,18 @@ async function handleRegister() {
 
 <template>
   <div class="register">
+    <!-- Validation request failed -->
+    <div v-if="loadError" class="register-card tg-card">
+      <p class="register-message" role="alert">
+        Could not check this link. Try again.
+      </p>
+      <button type="button" class="tg-btn tg-btn-primary register-submit" @click="validate">
+        Retry
+      </button>
+    </div>
+
     <!-- Loading state -->
-    <div v-if="valid === null" class="register-card tg-card">
+    <div v-else-if="valid === null" class="register-card tg-card">
       <p class="register-loading">
         Validating invite...
       </p>
