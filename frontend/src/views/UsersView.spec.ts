@@ -70,3 +70,233 @@ describe('usersView modal error', () => {
     wrapper.unmount()
   })
 })
+
+describe('usersView edit user', () => {
+  interface Fixture {
+    user: Record<string, unknown>
+    patchStatus?: number
+    patchBody?: unknown
+  }
+
+  function respondWithEditFixture({ user, patchStatus = 200, patchBody = { success: true } }: Fixture) {
+    const patchBodies: unknown[] = []
+    fetchMock.mockImplementation((url: string, opts?: RequestInit) => {
+      if (opts?.method === 'PATCH') {
+        patchBodies.push(JSON.parse(opts.body as string))
+        const status = patchBodies.length === 1
+          ? patchStatus
+          : 200
+        return Promise.resolve(jsonResponse(status === 200
+          ? { success: true }
+          : patchBody, status))
+      }
+      if (url === '/api/users')
+        return Promise.resolve(jsonResponse([user]))
+      if (url === '/api/access-preview')
+        return Promise.resolve(jsonResponse({ available: true, previews: [], guardedGroups: [] }))
+      if (url === '/api/groups' || url === '/api/reset-tokens' || url === '/api/bundles')
+        return Promise.resolve(jsonResponse([]))
+      return Promise.resolve(jsonResponse({}))
+    })
+    return patchBodies
+  }
+
+  function svcUser(email: unknown) {
+    const user: Record<string, unknown> = {
+      username: 'svc',
+      displayname: 'Service',
+      groups: ['users'],
+      disabled: false,
+    }
+    if (email !== undefined)
+      user.email = email
+    return user
+  }
+
+  function findDialog(title: string) {
+    const dialog = [
+      ...document.body.querySelectorAll('[role="dialog"]'),
+    ]
+      .find(el => el.textContent?.includes(title))
+    if (!dialog)
+      throw new Error(`No dialog found with title "${title}"`)
+    return dialog
+  }
+
+  function editForm() {
+    const form = findDialog('Edit User').querySelector('form')
+    if (!form)
+      throw new Error('No edit form found')
+    return form
+  }
+
+  async function openEditAndAddGroup(group: string) {
+    buttonByText('Edit').click()
+    await flushPromises()
+    const input = findDialog('Edit User').querySelector<HTMLInputElement>('input[placeholder="Add group..."]')!
+    input.value = group
+    input.dispatchEvent(new Event('input'))
+    await flushPromises()
+    buttonByText('Add').click()
+    await flushPromises()
+  }
+
+  async function submitEditAndConfirmAccessChange() {
+    editForm().dispatchEvent(new Event('submit'))
+    await flushPromises()
+    const diffDialog = findDialog('Confirm Access Change')
+    const confirm = [
+      ...diffDialog.querySelectorAll('button'),
+    ].find(b => b.textContent?.trim() === 'Confirm')!
+    confirm.click()
+    await flushPromises()
+  }
+
+  it.each([
+    ['a non-IsEmail address', 'admin@localhost'],
+    ['an empty email', ''],
+    ['no email', undefined],
+  ])('sends only the groups when editing the groups of a user with %s', async (_label, email) => {
+    const patchBodies = respondWithEditFixture({
+      user: svcUser(email),
+    })
+    const wrapper = mount(UsersView, { attachTo: document.body })
+    await flushPromises()
+
+    await openEditAndAddGroup('media')
+    expect(editForm().checkValidity()).toBe(true)
+    await submitEditAndConfirmAccessChange()
+
+    expect(patchBodies).toEqual([
+      {
+        groups: ['users', 'media'],
+      },
+    ])
+    wrapper.unmount()
+  })
+
+  it('still requires an email for a user who has one on file', async () => {
+    respondWithEditFixture({
+      user: svcUser('svc@example.com'),
+    })
+    const wrapper = mount(UsersView, { attachTo: document.body })
+    await flushPromises()
+
+    buttonByText('Edit').click()
+    await flushPromises()
+    const email = document.body.querySelector<HTMLInputElement>('#edit-email')!
+    email.value = ''
+    email.dispatchEvent(new Event('input'))
+    await flushPromises()
+
+    expect(editForm().checkValidity()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('sends the email when it was changed', async () => {
+    const patchBodies = respondWithEditFixture({
+      user: svcUser('admin@localhost'),
+    })
+    const wrapper = mount(UsersView, { attachTo: document.body })
+    await flushPromises()
+
+    buttonByText('Edit').click()
+    await flushPromises()
+    const email = document.body.querySelector<HTMLInputElement>('#edit-email')!
+    email.value = 'svc@example.com'
+    email.dispatchEvent(new Event('input'))
+    await flushPromises()
+    editForm().dispatchEvent(new Event('submit'))
+    await flushPromises()
+
+    expect(patchBodies).toEqual([
+      { email: 'svc@example.com' },
+    ])
+    wrapper.unmount()
+  })
+
+  it('closes the modal without a request when nothing was changed', async () => {
+    const patchBodies = respondWithEditFixture({
+      user: svcUser('admin@localhost'),
+    })
+    const wrapper = mount(UsersView, { attachTo: document.body })
+    await flushPromises()
+
+    buttonByText('Edit').click()
+    await flushPromises()
+    editForm().dispatchEvent(new Event('submit'))
+    await flushPromises()
+
+    expect(patchBodies).toEqual([])
+    expect(document.body.textContent).not.toContain('Edit User')
+    wrapper.unmount()
+  })
+
+  it('retries a late confirmRequired with the same changed fields plus confirm', async () => {
+    const patchBodies = respondWithEditFixture({
+      user: svcUser('admin@localhost'),
+      patchStatus: 409,
+      patchBody: {
+        message: 'This would leave no enabled members in admins',
+        confirmRequired: true,
+        enabledCount: 1,
+        emptiedGroups: ['admins'],
+      },
+    })
+    const wrapper = mount(UsersView, { attachTo: document.body })
+    await flushPromises()
+
+    await openEditAndAddGroup('media')
+    await submitEditAndConfirmAccessChange()
+
+    const retryDialog = findDialog('Confirm Action')
+    const confirm = [
+      ...retryDialog.querySelectorAll('button'),
+    ].find(b => b.textContent?.trim() === 'Confirm')!
+    confirm.click()
+    await flushPromises()
+
+    expect(patchBodies).toEqual([
+      {
+        groups: ['users', 'media'],
+      },
+      {
+        groups: ['users', 'media'],
+        confirm: true,
+      },
+    ])
+    wrapper.unmount()
+  })
+
+  it('retries an enabled-count guard on a displayname-only edit with confirm', async () => {
+    const patchBodies = respondWithEditFixture({
+      user: svcUser('admin@localhost'),
+      patchStatus: 409,
+      patchBody: { message: 'This would leave no enabled admins', confirmRequired: true },
+    })
+    const wrapper = mount(UsersView, { attachTo: document.body })
+    await flushPromises()
+
+    buttonByText('Edit').click()
+    await flushPromises()
+    const name = document.body.querySelector<HTMLInputElement>('#edit-displayname')!
+    name.value = 'Service Account'
+    name.dispatchEvent(new Event('input'))
+    await flushPromises()
+    editForm().dispatchEvent(new Event('submit'))
+    await flushPromises()
+
+    const retryDialog = findDialog('Confirm Action')
+    const confirm = [
+      ...retryDialog.querySelectorAll('button'),
+    ].find(b => b.textContent?.trim() === 'Confirm')!
+    confirm.click()
+    await flushPromises()
+
+    expect(patchBodies).toEqual([
+      { displayname: 'Service Account' },
+      { displayname: 'Service Account', confirm: true },
+    ])
+    wrapper.unmount()
+  })
+})

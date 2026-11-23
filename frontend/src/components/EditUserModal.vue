@@ -13,6 +13,8 @@ defineProps<{
   bundles: Bundle[]
   availableGroups: string[]
   effectiveAccess: EffectiveAccessResult
+  /** False when the user has no email on file, so the admin can save other fields without inventing one. */
+  emailRequired: boolean
   error: string
   loading: boolean
   accessDiffShow: boolean
@@ -41,7 +43,7 @@ const form = defineModel<EditUserForm>('form', { required: true })
       </div>
       <div class="tg-form-field">
         <label for="edit-email" class="tg-form-label">Email</label>
-        <input id="edit-email" v-model="form.email" type="email" class="tg-input" required>
+        <input id="edit-email" v-model="form.email" type="email" class="tg-input" :required="emailRequired">
       </div>
       <GroupsField v-model:groups="form.groups" :bundles="bundles" :available-groups="availableGroups" />
       <div class="tg-form-field">
