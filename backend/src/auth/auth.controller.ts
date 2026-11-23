@@ -59,8 +59,8 @@ export class AuthController {
     default: { ttl: 60_000, limit: 5 },
   })
   async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    // `req.ip` under the one trusted proxy hop main.ts sets — no header is
-    // parsed by hand.
+    // `req.ip` under the proxy trust configureApp sets from TRUST_PROXY — no
+    // header is parsed by hand.
     const token = await this.authService.login(dto.password, req.ip)
 
     res.cookie('tegata_token', token, {
