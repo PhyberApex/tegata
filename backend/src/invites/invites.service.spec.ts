@@ -173,7 +173,7 @@ describe('invitesService', () => {
       expect(mockUsersService.isEmailTaken).toHaveBeenCalledWith('alice@test.com')
     })
 
-    it('should refuse a pre-fill email that already belongs to a user, inserting nothing and sending nothing', async () => {
+    it('should refuse an email prefill that already belongs to a user, inserting nothing and sending nothing', async () => {
       mockUsersService.isEmailTaken.mockImplementation(email => email.trim().toLowerCase() === 'alice@test.com')
 
       await expect(
@@ -389,6 +389,17 @@ describe('invitesService', () => {
       mockGet.mockReturnValue(pendingInviteRow({ expires_at: '2020-01-01T00:00:00.000Z' }))
 
       await expect(service.sendInviteEmail('inv-1')).rejects.toThrow(BadRequestException)
+    })
+
+    it('should refuse with ConflictException, sending nothing, once the email prefill belongs to a user', async () => {
+      mockGet.mockReturnValue(pendingInviteRow())
+      mockUsersService.isEmailTaken.mockReturnValue(true)
+
+      await expect(service.sendInviteEmail('inv-1')).rejects.toThrow(new ConflictException('That email address is already in use'))
+
+      expect(mockUsersService.isEmailTaken).toHaveBeenCalledWith('alice@test.com')
+      expect(mockMailService.sendInviteEmail).not.toHaveBeenCalled()
+      expect(mockRun).not.toHaveBeenCalled()
     })
 
     it('should send the email with the invite groups and expiry, then record success', async () => {

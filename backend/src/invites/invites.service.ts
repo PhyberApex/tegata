@@ -5,7 +5,7 @@ import { DatabaseService } from '../database/database.service'
 import { GroupsService } from '../groups/groups.service'
 import { MailService } from '../mail/mail.service'
 import { recordEmailResult } from '../mail/record-email-result'
-import { UsersService } from '../users/users.service'
+import { EMAIL_IN_USE_MESSAGE, UsersService } from '../users/users.service'
 import { isPendingInvite } from './pending-invite'
 
 export { isPendingInvite } from './pending-invite'
@@ -39,9 +39,9 @@ export class InvitesService {
   }
 
   async createInvite(groups: string[], expiresInDays?: number | null, prefill: InvitePrefill = {}, bundleName?: string | null, sendEmail = false): Promise<Invite> {
-    // Refused up front: redemption would answer 409 on every attempt, and the invitee cannot change a pre-filled email.
+    // Refused up front: redemption would answer 409 on every attempt, and the invitee cannot change an email prefill.
     if (prefill.email && this.usersService.isEmailTaken(prefill.email))
-      throw new ConflictException('That email address is already in use')
+      throw new ConflictException(EMAIL_IN_USE_MESSAGE)
 
     const id = randomUUID()
     const token = randomUUID()
@@ -83,6 +83,9 @@ export class InvitesService {
     if (!isPendingInvite(invite))
       throw new BadRequestException('Invite is no longer pending')
 
+    if (this.isPrefillEmailTaken(invite))
+      throw new ConflictException(EMAIL_IN_USE_MESSAGE)
+
     const result = await this.mailService.sendInviteEmail({
       to: invite.email,
       displayname: invite.displayname,
@@ -100,8 +103,8 @@ export class InvitesService {
   }
 
   /**
-   * Whether the invite's pre-filled email has been taken by a user since the invite was created — such an invite
-   * can never be redeemed, since redemption uses the pre-filled email over the submitted one.
+   * Whether the invite's email prefill has been taken by a user since the invite was created — such an invite
+   * can never be redeemed, since redemption uses the prefill over the submitted email.
    */
   isPrefillEmailTaken(invite: Invite): boolean {
     return invite.email !== null && this.usersService.isEmailTaken(invite.email)

@@ -257,7 +257,7 @@ describe('invitesController', () => {
       })
     })
 
-    it('should report a pending invite as invalid, with a reason, once its pre-fill email belongs to a user', () => {
+    it('should report a pending invite as invalid, with a reason, once its email prefill belongs to a user', () => {
       const invite = {
         id: '1',
         token: 't',

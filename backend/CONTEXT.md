@@ -29,7 +29,7 @@ A named, admin-defined set of Group names (e.g. "Family member"), stored in SQLi
 _Avoid_: Group template, group preset, saved group set, live bundle (there is no such thing — see Membership Projection)
 
 **Invite**:
-A token (7-day expiry by default) that grants the bearer permission to self-register, pre-assigned to one or more Groups. Lives in SQLite, independent of the Authelia Users Database until redeemed.
+A token (7-day expiry by default) that grants the bearer permission to self-register, pre-assigned to one or more Groups. Lives in SQLite, independent of the Authelia Users Database until redeemed. An `email` prefill must be free when the Invite is created (409 otherwise), since Redemption uses it over the submitted address; one taken by a user afterwards makes the Invite unredeemable — `GET /api/invites/:token/validate` answers `valid: false` with a `reason`, and a send/resend answers 409.
 
 **Redemption**:
 The act of exchanging a still-valid, not-yet-used Invite for a new Authelia user account — the invite is marked used (`used_by`/`used_at`) and can never be redeemed again, but it isn't deleted (unlike revocation). The mark is claimed *before* the account is written, so of two concurrent redemptions of one token only one gets past it; if the account write then fails (a taken username or email address, an unreadable database) the mark is released and the invite stays redeemable. A Reset Token's redemption claims `used_at` the same way, except that a token whose user was deleted, or that a newer token superseded, while the password was being hashed is deleted rather than released.
