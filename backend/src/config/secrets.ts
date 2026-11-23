@@ -3,9 +3,10 @@ import { verify } from 'argon2'
 
 const MIN_JWT_SECRET_LENGTH = 32
 const PLACEHOLDER_JWT_SECRET = 'change-me'
+const ARGON2_FAMILY = '$argon2'
 const ARGON2_PREFIX = /^\$argon2(?:id|i|d)\$/
 const JWT_SECRET_FIX = 'generate one with: openssl rand -hex 32'
-const DOLLAR_RULE = 'Compose interpolates `$` in both places: in an `env_file:` wrap the hash in single quotes (or double every `$`); in a compose `environment:` list every `$` has to be doubled (`$$`).'
+const COMPOSE_QUOTING_RULE = 'Compose interpolates `$` in both places: in an `env_file:` wrap the hash in single quotes (or double every `$`); in a compose `environment:` list every `$` has to be doubled (`$$`).'
 const INTERPOLATED_HINT = 'The value does not start with `$argon2`, which usually means Compose interpolated its `$` signs.'
 
 /**
@@ -27,11 +28,11 @@ export function assertJwtSecret(secret: string): void {
  */
 export async function assertAdminPasswordHash(passwordHash: string): Promise<void> {
   if (!ARGON2_PREFIX.test(passwordHash)) {
-    const hint = passwordHash.startsWith('$argon2')
+    const hint = passwordHash.startsWith(ARGON2_FAMILY)
       ? ''
       : ` ${INTERPOLATED_HINT}`
     throw new Error(
-      `TEGATA_ADMIN_PASSWORD_HASH must be an argon2 hash starting with $argon2id$, $argon2i$ or $argon2d$.${hint} ${DOLLAR_RULE}`,
+      `TEGATA_ADMIN_PASSWORD_HASH must be an argon2 hash starting with $argon2id$, $argon2i$ or $argon2d$.${hint} ${COMPOSE_QUOTING_RULE}`,
     )
   }
   try {
@@ -40,7 +41,7 @@ export async function assertAdminPasswordHash(passwordHash: string): Promise<voi
   catch (error) {
     const reason = (error as Error).message
     throw new Error(
-      `TEGATA_ADMIN_PASSWORD_HASH cannot be parsed by argon2 (${reason}). Generate a fresh one with: authelia crypto hash generate argon2. ${DOLLAR_RULE}`,
+      `TEGATA_ADMIN_PASSWORD_HASH cannot be parsed by argon2 (${reason}). Generate a fresh one with: authelia crypto hash generate argon2. ${COMPOSE_QUOTING_RULE}`,
     )
   }
 }

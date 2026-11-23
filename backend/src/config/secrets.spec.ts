@@ -40,7 +40,7 @@ describe('assertAdminPasswordHash', () => {
   })
 
   it('does not add the interpolation hint when the value starts with $argon2', async () => {
-    await expect(assertAdminPasswordHash('$argon2x$v=19$m=32,t=1,p=1$c2FsdHNhbHQ$aGFzaGhhc2g')).rejects.not.toThrow(/interpolated/)
+    await expect(assertAdminPasswordHash('$argon2x$v=19$m=32,t=1,p=1$c2FsdHNhbHQ$aGFzaGhhc2g')).rejects.not.toThrow(/does not start with/)
   })
 
   it.each([

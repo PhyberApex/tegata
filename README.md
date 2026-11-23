@@ -33,7 +33,8 @@ From zero to an admin login, assuming Authelia is already running with the file 
    `TEGATA_ADMIN_PASSWORD_HASH`, and `openssl rand -hex 32` for `TEGATA_JWT_SECRET`.
 4. **Copy [`.env.example`](.env.example) to `.env`** and fill in the required variables
    (`TEGATA_ADMIN_PASSWORD_HASH`, `TEGATA_JWT_SECRET`) and the `for SSO` ones (`OIDC_ISSUER`,
-   `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`). Everything else is optional;
+   `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`). Keep the hash inside the single
+   quotes, or Compose mangles its `$` signs. Everything else is optional;
    see [Environment variables](#environment-variables) for `PORT`, `TRUST_PROXY`, `SITE_NAME`,
    `NATIVE_LOGIN_CIDRS` and the rest.
 5. **Add the compose service** from [Running it](#running-it) (or start from
