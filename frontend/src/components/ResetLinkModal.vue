@@ -11,6 +11,7 @@ defineProps<{
   tokenExpired: boolean
   copied: boolean
   sending: boolean
+  emailPending?: boolean
   error: string
   loading: boolean
 }>()
@@ -29,6 +30,7 @@ const form = defineModel<ResetLinkForm>('form', { required: true })
       :token-expired="tokenExpired"
       :copied="copied"
       :sending="sending"
+      :email-pending="emailPending"
       :error="error"
       :loading="loading"
       @revoke="$emit('revoke')"

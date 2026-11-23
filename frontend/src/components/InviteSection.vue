@@ -8,6 +8,7 @@ defineProps<{
   variant: 'active' | 'used' | 'expired'
   copiedId: string | null
   sendingId: string | null
+  isEmailPending?: (invite: Invite) => boolean
 }>()
 
 defineEmits<{
@@ -32,6 +33,7 @@ defineEmits<{
         :variant="variant"
         :copied-id="copiedId"
         :sending-id="sendingId"
+        :email-pending="isEmailPending?.(invite) ?? false"
         @qr="$emit('qr', $event)"
         @copy="$emit('copy', $event)"
         @send="$emit('send', $event)"

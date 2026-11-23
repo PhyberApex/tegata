@@ -11,6 +11,7 @@ import UserTable from '../components/UserTable.vue'
 import { computeEffectiveAccess, computeEmptiedGuardedGroups, haveGroupsChanged } from '../composables/effectiveAccess'
 import { confirmAccessDiffWithGuardFallback, useAccessDiffConfirm } from '../composables/useAccessDiffConfirm'
 import { isEnabledCountGuardError, useApi } from '../composables/useApi'
+import { useEmailDeliveryPolling } from '../composables/useEmailDeliveryPolling'
 import { useEnabledCountConfirm } from '../composables/useEnabledCountConfirm'
 import { useModalAction } from '../composables/useModalAction'
 import { usernameError } from '../composables/useRegisterForm'
@@ -94,6 +95,11 @@ async function loadData() {
 }
 
 onMounted(loadData)
+
+const resetEmailDelivery = useEmailDeliveryPolling(loadData, () => resetTokens.value)
+const outstandingResetEmailPending = computed(() =>
+  outstandingResetToken.value !== null && resetEmailDelivery.isPending(outstandingResetToken.value),
+)
 
 function openCreate() {
   createForm.value = {
@@ -225,14 +231,17 @@ function handleAccessDiffConfirm() {
 
 async function handleGenerateResetLink() {
   await modalAction.run(async () => {
-    await api.post<ResetToken>('/api/reset-tokens', {
+    const sendEmail = resetLinkForm.value.sendEmail
+    const created = await api.post<ResetToken>('/api/reset-tokens', {
       username: resetLinkTarget.value,
       expiresInDays: resetLinkForm.value.expiresInDays,
-      ...resetLinkForm.value.sendEmail
+      ...sendEmail
         ? { sendEmail: true }
         : {},
     })
     await loadData()
+    if (sendEmail)
+      resetEmailDelivery.track(created.id)
   }, 'Failed to generate reset link')
 }
 
@@ -415,6 +424,7 @@ async function handleDelete() {
       :token-expired="outstandingTokenExpired"
       :copied="resetLinkCopied"
       :sending="sendingResetLink"
+      :email-pending="outstandingResetEmailPending"
       :error="modalAction.error.value"
       :loading="modalAction.loading.value"
       @generate="handleGenerateResetLink"
