@@ -30,6 +30,10 @@ async function mountView(token = 'good-token') {
   return wrapper
 }
 
+function retryButton(wrapper: Awaited<ReturnType<typeof mountView>>) {
+  return wrapper.findAll('button').find(b => b.text() === 'Retry')
+}
+
 beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock)
 })
@@ -46,6 +50,7 @@ describe('resetView', () => {
     const wrapper = await mountView()
 
     expect(wrapper.text()).toContain('Could not check this link. Try again.')
+    expect(retryButton(wrapper)).toBeDefined()
     expect(wrapper.text()).not.toContain('Invalid Reset Link')
     expect(wrapper.find('form').exists()).toBe(false)
   })
@@ -64,7 +69,7 @@ describe('resetView', () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ valid: true, username: 'alice' }))
 
     const wrapper = await mountView()
-    await wrapper.get('button').trigger('click')
+    await retryButton(wrapper)!.trigger('click')
     await flushPromises()
 
     expect(wrapper.find('form').exists()).toBe(true)

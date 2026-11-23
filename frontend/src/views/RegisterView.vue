@@ -10,7 +10,7 @@ import { siteName } from '../composables/useSiteName'
 const route = useRoute()
 const api = useApi()
 
-const token = encodeURIComponent(route.params.token as string)
+const token = route.params.token as string
 const valid = ref<boolean | null>(null)
 /** Set when the validate request itself failed (network, 5xx, 429): the link may be fine, so offer a retry, not the invalid card. */
 const loadError = ref(false)
@@ -97,7 +97,7 @@ async function validate() {
   valid.value = null
   loadError.value = false
   try {
-    const res = await api.get<InviteValidation>(`/api/invites/${token}/validate`)
+    const res = await api.get<InviteValidation>(`/api/invites/${encodeURIComponent(token)}/validate`)
     valid.value = res.valid
     invalidReason.value = res.reason ?? ''
     if (res.groups)
@@ -122,7 +122,7 @@ async function handleRegister() {
 
   loading.value = true
   try {
-    await api.post(`/api/invites/${token}/redeem`, {
+    await api.post(`/api/invites/${encodeURIComponent(token)}/redeem`, {
       username: form.value.username,
       displayname: form.value.displayname,
       email: form.value.email,

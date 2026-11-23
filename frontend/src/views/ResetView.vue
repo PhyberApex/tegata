@@ -8,7 +8,7 @@ import { siteName } from '../composables/useSiteName'
 const route = useRoute()
 const api = useApi()
 
-const token = encodeURIComponent(route.params.token as string)
+const token = route.params.token as string
 const valid = ref<boolean | null>(null)
 /** Set when the validate request itself failed (network, 5xx, 429): the link may be fine, so offer a retry, not the invalid card. */
 const loadError = ref(false)
@@ -26,7 +26,7 @@ async function validate() {
   valid.value = null
   loadError.value = false
   try {
-    const res = await api.get<{ valid: boolean, username?: string }>(`/api/reset-tokens/${token}/validate`)
+    const res = await api.get<{ valid: boolean, username?: string }>(`/api/reset-tokens/${encodeURIComponent(token)}/validate`)
     valid.value = res.valid
     if (res.username)
       username.value = res.username
@@ -45,7 +45,7 @@ async function handleReset() {
 
   loading.value = true
   try {
-    await api.post(`/api/reset-tokens/${token}/redeem`, {
+    await api.post(`/api/reset-tokens/${encodeURIComponent(token)}/redeem`, {
       password: form.value.password,
     })
     success.value = true
