@@ -169,10 +169,7 @@ describe('profile over HTTP', () => {
         { displayname: undefined, email: 'bob@example.com' },
       ],
     ])
-    const body = (await res.json()) as Record<string, unknown>
-    expect(body).toStrictEqual({ username: 'bob', displayname: 'Bob', email: 'bob@example.com' })
-    expect(body).not.toHaveProperty('groups')
-    expect(body).not.toHaveProperty('disabled')
+    expect(await res.json()).toStrictEqual({ username: 'bob', displayname: 'Bob', email: 'bob@example.com' })
   })
 
   it.each(['', '   '])('should answer 400 to the blank displayname %j and change nothing', async (displayname) => {

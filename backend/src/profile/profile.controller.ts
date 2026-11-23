@@ -47,9 +47,9 @@ export class ProfileController {
   }
 
   /**
-   * Hands `updateUser` an explicit `{ displayname, email }` rather than the DTO, so a self-service body can
-   * never reach `groups` or `disabled` even if the global pipe stops whitelisting; and answers with the same
-   * narrowed shape as `get()`.
+   * Only `displayname` and `email` are forwarded, so a self-service body can never reach `groups` or
+   * `disabled` even if the global pipe stops whitelisting; and the answer is narrowed like `get()`'s, so
+   * self-service reads no more than it can write.
    */
   @Patch()
   update(@Req() req: ProfileRequest, @Body() dto: UpdateProfileDto): OwnProfile {
