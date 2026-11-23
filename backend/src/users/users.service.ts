@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { chmodSync, closeSync, existsSync, fsyncSync, openSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { ConflictException, Injectable, Logger, NotFoundException, OnModuleInit, ServiceUnavailableException } from '@nestjs/common'
+import { ConflictException, Injectable, Logger, NotFoundException, OnModuleInit, ServiceUnavailableException, UnprocessableEntityException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as argon2 from 'argon2'
 import * as yaml from 'js-yaml'
@@ -76,6 +76,22 @@ export type UnreadableKind = 'read-error' | 'missing' | 'invalid-yaml' | 'no-use
 export interface UnreadableUsersDatabase { readable: false, kind: UnreadableKind, reason: string }
 
 export type UsersDatabaseReadability = { readable: true } | UnreadableUsersDatabase
+
+/** Whether `stored` names an argon2 variant — the only digest `argon2.verify` can check a password against. */
+function isArgon2Hash(stored: unknown): stored is string {
+  return typeof stored === 'string' && stored.startsWith('$argon2')
+}
+
+/**
+ * An Unverifiable Password Hash (CONTEXT.md): a user's stored hash is one Tegata cannot check a password against — another digest Authelia accepts
+ * (sha512-crypt, bcrypt, pbkdf2…), a malformed argon2 string, or no `password` at all. Distinct from a wrong
+ * password: retrying cannot succeed, only a reset through Tegata (which writes argon2id) can.
+ */
+export class UnverifiablePasswordHashException extends UnprocessableEntityException {
+  constructor() {
+    super('This account\'s password is stored in a format Tegata cannot verify; ask an admin for a reset link')
+  }
+}
 
 export interface PublicUser { username: string, displayname: string, email: string, groups: string[], disabled: boolean }
 
@@ -689,13 +705,29 @@ export class UsersService implements OnModuleInit {
     this.logger.debug(`Group removed from every user: ${group}`)
   }
 
-  /** Throws instead of resolving false when the database is unreadable — see {@link userExists}. */
+  /**
+   * Throws instead of resolving false when the database is unreadable — see {@link userExists} — and with
+   * {@link UnverifiablePasswordHashException} when the stored hash is not one argon2 can check.
+   */
   async verifyPassword(username: string, password: string): Promise<boolean> {
     const user = lookupUser(this.readDatabaseOrThrow().users, username)
     if (!user)
       return false
 
-    return argon2.verify(user.password, password)
+    // Typed `string`, but a hand-edited entry may carry no `password` or a non-string one.
+    const stored: unknown = user.password
+    if (!isArgon2Hash(stored))
+      throw new UnverifiablePasswordHashException()
+    try {
+      return await argon2.verify(stored, password)
+    }
+    catch (err) {
+      // Logged so a fault other than an unparsable hash stays visible behind the 422.
+      this.logger.warn(`argon2 could not verify the stored hash of ${username}: ${err instanceof Error
+        ? err.message
+        : String(err)}`)
+      throw new UnverifiablePasswordHashException()
+    }
   }
 
   async resetPassword(username: string, newPassword: string) {
