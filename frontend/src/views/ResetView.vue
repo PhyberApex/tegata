@@ -8,8 +8,10 @@ import { siteName } from '../composables/useSiteName'
 const route = useRoute()
 const api = useApi()
 
-const token = route.params.token as string
+const token = encodeURIComponent(route.params.token as string)
 const valid = ref<boolean | null>(null)
+/** Set when the validate request itself failed (network, 5xx, 429): the link may be fine, so offer a retry, not the invalid card. */
+const loadError = ref(false)
 const username = ref('')
 const success = ref(false)
 const error = ref('')
@@ -20,7 +22,9 @@ const form = ref({
   confirmPassword: '',
 })
 
-onMounted(async () => {
+async function validate() {
+  valid.value = null
+  loadError.value = false
   try {
     const res = await api.get<{ valid: boolean, username?: string }>(`/api/reset-tokens/${token}/validate`)
     valid.value = res.valid
@@ -28,9 +32,11 @@ onMounted(async () => {
       username.value = res.username
   }
   catch {
-    valid.value = false
+    loadError.value = true
   }
-})
+}
+
+onMounted(validate)
 
 async function handleReset() {
   error.value = passwordMatchError(form.value)
@@ -57,8 +63,18 @@ async function handleReset() {
 
 <template>
   <div class="reset">
+    <!-- Validation request failed -->
+    <div v-if="loadError" class="reset-card tg-card">
+      <p class="reset-message" role="alert">
+        Could not check this link. Try again.
+      </p>
+      <button type="button" class="tg-btn tg-btn-primary reset-submit" @click="validate">
+        Retry
+      </button>
+    </div>
+
     <!-- Loading state -->
-    <div v-if="valid === null" class="reset-card tg-card">
+    <div v-else-if="valid === null" class="reset-card tg-card">
       <p class="reset-loading">
         Validating reset link...
       </p>
