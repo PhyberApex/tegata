@@ -17,6 +17,7 @@ const statMock = stat as unknown as Mock
 
 const mockUsers = {
   listUsers: vi.fn(),
+  getReadability: vi.fn(),
 }
 
 const mockInvites = {
@@ -63,6 +64,7 @@ describe('statusService', () => {
     service = module.get<StatusService>(StatusService)
 
     mockUsers.listUsers.mockReturnValue([])
+    mockUsers.getReadability.mockReturnValue({ readable: true })
     mockInvites.listInvites.mockReturnValue([])
   })
 
@@ -139,6 +141,43 @@ describe('statusService', () => {
       const result = await service.getStatus()
 
       expect(result.authelia).toEqual({ ageHours: null, ok: false })
+    })
+
+    it('should report ok when the users database is readable', async () => {
+      statMock.mockResolvedValue({
+        mtimeMs: Date.now(),
+      })
+      mockUsers.getReadability.mockReturnValue({ readable: true })
+
+      const result = await service.getStatus()
+
+      expect(result.authelia.ok).toBe(true)
+      expect(mockUsers.getReadability).toHaveBeenCalled()
+    })
+
+    it('should report not-ok with a numeric age when the file exists but is not readable as a users database', async () => {
+      const twoHoursAgo = Date.now() - 2 * 3_600_000
+      statMock.mockResolvedValue({ mtimeMs: twoHoursAgo })
+      mockUsers.getReadability.mockReturnValue({ readable: false, kind: 'invalid-yaml', reason: 'bad yaml' })
+
+      const result = await service.getStatus()
+
+      expect(result.authelia.ok).toBe(false)
+      expect(result.authelia.ageHours).toBeCloseTo(2, 1)
+    })
+
+    it('should report not-ok rather than throwing when the readability check throws', async () => {
+      statMock.mockResolvedValue({
+        mtimeMs: Date.now(),
+      })
+      mockUsers.getReadability.mockImplementation(() => {
+        throw new Error('boom')
+      })
+
+      const result = await service.getStatus()
+
+      expect(result.authelia.ok).toBe(false)
+      expect(typeof result.authelia.ageHours).toBe('number')
     })
   })
 })
