@@ -869,6 +869,8 @@ users:
     phone_extension: 0042
     badge: 12345678901234567890
     version: 1.10
+    badge_hex: 0x1F
+    nickname: 0123
     groups:
       - agents
       - users
@@ -893,6 +895,7 @@ users:
       return (yaml.load(content, { schema: yaml.FAILSAFE_SCHEMA }) as { users: Record<string, Record<string, unknown>> }).users
     }
 
+    /** The numeric-looking key and values of the fixture, still exactly as written. */
     function expectNumericLookingValuesKept() {
       const users = rawUsersOnDisk()
       expect(Object.keys(users)).toEqual(['007', 'bob', 'mallory'])
@@ -901,6 +904,8 @@ users:
         phone_extension: '0042',
         badge: '12345678901234567890',
         version: '1.10',
+        badge_hex: '0x1F',
+        nickname: '0123',
       })
     }
 
