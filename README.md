@@ -33,7 +33,8 @@ From zero to an admin login, assuming Authelia is already running with the file 
    `TEGATA_ADMIN_PASSWORD_HASH`, and `openssl rand -hex 32` for `TEGATA_JWT_SECRET`.
 4. **Copy [`.env.example`](.env.example) to `.env`** and fill in the required variables
    (`TEGATA_ADMIN_PASSWORD_HASH`, `TEGATA_JWT_SECRET`) and the `for SSO` ones (`OIDC_ISSUER`,
-   `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`). Everything else is optional;
+   `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_REDIRECT_URI`). Keep the hash inside the single
+   quotes, or Compose mangles its `$` signs. Everything else is optional;
    see [Environment variables](#environment-variables) for `PORT`, `TRUST_PROXY`, `SITE_NAME`,
    `NATIVE_LOGIN_CIDRS` and the rest.
 5. **Add the compose service** from [Running it](#running-it) (or start from
@@ -181,8 +182,10 @@ Generate the admin password hash with Authelia itself:
 docker run --rm authelia/authelia:latest authelia crypto hash generate argon2 --password 'yourpassword'
 ```
 
-In a compose `environment:` list every `$` in the hash has to be doubled (`$$argon2id$$…`);
-in an `env_file` it is taken literally.
+Compose interpolates `$` in an `env_file` as well as in `environment:`, so an unquoted hash
+arrives mangled and refuses to boot. In an `env_file` such as `.env`, wrap the hash in single
+quotes (`TEGATA_ADMIN_PASSWORD_HASH='$argon2id$v=19$…'`) or double every `$`; in a compose
+`environment:` list every `$` has to be doubled (`$$argon2id$$…`).
 
 ### Authelia configuration
 
@@ -221,7 +224,7 @@ open — it is open on purpose.
 
 | Variable | Required | Default | What it does |
 |---|---|---|---|
-| `TEGATA_ADMIN_PASSWORD_HASH` | yes | — | argon2id hash of the break-glass password; a value that does not start with `$argon2id$`, `$argon2i$` or `$argon2d$`, or that argon2 cannot parse, refuses to boot (in a compose `environment:` list every `$` has to be doubled) |
+| `TEGATA_ADMIN_PASSWORD_HASH` | yes | — | argon2id hash of the break-glass password; a value that does not start with `$argon2id$`, `$argon2i$` or `$argon2d$`, or that argon2 cannot parse, refuses to boot (in an `env_file` wrap it in single quotes; in a compose `environment:` list every `$` has to be doubled) |
 | `TEGATA_JWT_SECRET` | yes | — | signs the session cookie; `openssl rand -hex 32`; at least 32 characters, and the `change-me` placeholder or anything shorter refuses to boot |
 | `OIDC_ISSUER` | for SSO | — | Authelia's URL, e.g. `https://auth.example.com` |
 | `OIDC_CLIENT_ID` | for SSO | — | the client id from Authelia's config |

@@ -444,7 +444,8 @@
             <ol class="run-steps">
               <li>
                 Generate the break-glass password hash with Authelia itself and put it in
-                <code>.env</code> alongside a session secret.
+                <code>.env</code>, in single quotes so Compose leaves its <code>$</code> signs
+                alone, alongside a session secret.
               </li>
               <li>
                 Register Tegata as an OIDC client in Authelia, and make sure Authelia is
