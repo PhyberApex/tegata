@@ -41,6 +41,8 @@ function handleKeydown(e: KeyboardEvent) {
     </div>
 
     <div class="group-add">
+      <!-- change fires on blur, before a submit click, so a value typed or picked
+           from the datalist is committed rather than dropped with the form. -->
       <input
         v-model="newGroup"
         type="text"
@@ -48,6 +50,7 @@ function handleKeydown(e: KeyboardEvent) {
         placeholder="Add group..."
         :list="listId"
         @keydown="handleKeydown"
+        @change="addGroup(newGroup)"
       >
       <datalist :id="listId">
         <option
