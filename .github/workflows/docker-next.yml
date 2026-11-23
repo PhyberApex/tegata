@@ -8,6 +8,13 @@ permissions:
   contents: read
   packages: write
 
+# :next is a mutable tag, so a newer push supersedes any run still in flight:
+# otherwise an older run whose multi-arch build finishes last would point
+# :next back at the older commit.
+concurrency:
+  group: docker-next
+  cancel-in-progress: true
+
 jobs:
   checks:
     uses: ./.github/workflows/checks.yml
