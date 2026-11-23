@@ -241,8 +241,14 @@ function matchDeny(rule: AccessRule, attrs: RuleAttributes, knownGroups: string[
   }
 }
 
-function matchPlaceholder(attrs: RuleAttributes): RuleClassification | undefined {
-  if (attrs.placeholderDomains.length === 0 || attrs.subjects.length > 0 || attrs.qualifiers.length > 0)
+// a subject that is present but holds no string is a typo rather than
+// everyone, so only an absent or empty one grants every group
+function isAbsentSubject(subject: unknown): boolean {
+  return !isSet(subject) || (Array.isArray(subject) && subject.length === 0)
+}
+
+function matchPlaceholder(rule: AccessRule, attrs: RuleAttributes): RuleClassification | undefined {
+  if (attrs.placeholderDomains.length === 0 || !isAbsentSubject(rule.subject) || attrs.qualifiers.length > 0)
     return undefined
   // a {group} past the leading label falls through to an unparsed note
   if (!attrs.placeholderDomains.every(isLeadingPlaceholder))
@@ -260,12 +266,6 @@ function matchPlaceholder(attrs: RuleAttributes): RuleClassification | undefined
 // literal domains, so like a subjectless deny it decides them for everyone.
 // domain_regex is OR'd with domain, so the literal domains still match — the
 // regex itself isn't modeled
-// a subject that is present but holds no string is a typo rather than
-// everyone, so only an absent or empty one grants every group
-function isAbsentSubject(subject: unknown): boolean {
-  return !isSet(subject) || (Array.isArray(subject) && subject.length === 0)
-}
-
 function matchEveryone(rule: AccessRule, attrs: RuleAttributes): RuleClassification | undefined {
   const everyone = isAbsentSubject(rule.subject)
     && attrs.placeholderDomains.length === 0
@@ -318,7 +318,7 @@ function matchUnparsed(attrs: RuleAttributes, knownGroups: string[]): RuleClassi
 function classifyAccessRule(rule: AccessRule, knownGroups: string[]): RuleClassification {
   const attrs = parseRuleAttributes(rule)
   return matchDeny(rule, attrs, knownGroups)
-    ?? matchPlaceholder(attrs)
+    ?? matchPlaceholder(rule, attrs)
     ?? matchEveryone(rule, attrs)
     ?? matchNoGroupSkip(attrs)
     ?? matchModeled(rule, attrs)

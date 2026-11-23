@@ -217,6 +217,11 @@ describe('buildAccessPreviews', () => {
               subject: [123],
               policy: 'one_factor',
             },
+            {
+              domain: '{group}.example.com',
+              subject: [123],
+              policy: 'one_factor',
+            },
           ],
         },
       }
