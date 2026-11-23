@@ -36,6 +36,9 @@ function lookupUser(users: Record<string, AutheliaUser>, username: string): Auth
     : undefined
 }
 
+/** The 409 for an email that already belongs to a user. Names no account: a `self` session and an invite reach it. */
+export const EMAIL_IN_USE_MESSAGE = 'That email address is already in use'
+
 /** The form two emails are compared in. Tolerates a hand-edited record whose `email` is missing or not a string. */
 function normalizeEmail(email: unknown): string {
   return typeof email === 'string'
@@ -230,18 +233,19 @@ export class UsersService implements OnModuleInit {
   /**
    * Authelia's file backend refuses a users file where two users share an email once email search is on, and
    * Email Delivery of a Reset Token resolves the address from the record — so an email may be on one user
-   * only. Compared trimmed and case-insensitively. The message names no account: a `self` session and an
-   * invite redemption reach this too.
+   * only.
    */
   private assertEmailFree(db: UsersDatabase, email: string, exceptUsername?: string): void {
+    if (this.emailTakenIn(db, email, exceptUsername))
+      throw new ConflictException(EMAIL_IN_USE_MESSAGE)
+  }
+
+  /** Compared trimmed and case-insensitively; an empty email is never taken. */
+  private emailTakenIn(db: UsersDatabase, email: string, exceptUsername?: string): boolean {
     const wanted = normalizeEmail(email)
-    if (!wanted)
-      return
-    const taken = Object.entries(db.users).some(([username, user]) =>
+    return wanted !== '' && Object.entries(db.users).some(([username, user]) =>
       username !== exceptUsername && normalizeEmail(user.email) === wanted,
     )
-    if (taken)
-      throw new ConflictException('That email address is already in use')
   }
 
   private findUserOrThrow(db: UsersDatabase, username: string): AutheliaUser {
@@ -519,6 +523,14 @@ export class UsersService implements OnModuleInit {
    */
   userExists(username: string): boolean {
     return Boolean(lookupUser(this.readDatabaseOrThrow().users, username))
+  }
+
+  /**
+   * Whether `email` already belongs to a user, compared the way `createUser` refuses it (trimmed,
+   * case-insensitive). An empty email is never taken. Throws when the database is unreadable, like `userExists`.
+   */
+  isEmailTaken(email: string): boolean {
+    return this.emailTakenIn(this.readDatabaseOrThrow(), email)
   }
 
   /**

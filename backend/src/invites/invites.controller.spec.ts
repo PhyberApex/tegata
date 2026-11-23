@@ -7,7 +7,7 @@ import { InvitesService } from './invites.service'
 
 describe('invitesController', () => {
   let controller: InvitesController
-  let mockInvitesService: Mocked<Pick<InvitesService, 'listInvites' | 'createInvite' | 'revokeInvite' | 'getByToken' | 'redeemInvite' | 'sendInviteEmail'>>
+  let mockInvitesService: Mocked<Pick<InvitesService, 'listInvites' | 'createInvite' | 'revokeInvite' | 'getByToken' | 'redeemInvite' | 'sendInviteEmail' | 'isPrefillEmailTaken'>>
 
   beforeEach(async () => {
     mockInvitesService = {
@@ -17,6 +17,7 @@ describe('invitesController', () => {
       getByToken: vi.fn(),
       redeemInvite: vi.fn(),
       sendInviteEmail: vi.fn(),
+      isPrefillEmailTaken: vi.fn(() => false),
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -254,6 +255,31 @@ describe('invitesController', () => {
         email: 'alice@test.com',
         displayname: 'Alice',
       })
+    })
+
+    it('should report a pending invite as invalid, with a reason, once its email prefill belongs to a user', () => {
+      const invite = {
+        id: '1',
+        token: 't',
+        groups: ['users'],
+        expires_at: '2099-01-01T00:00:00.000Z',
+        email: 'alice@test.com',
+        displayname: 'Alice',
+        used_by: null,
+        used_at: null,
+        created_at: '2024-01-01',
+        bundle_name: null,
+        email_sent_at: null,
+        email_error: null,
+      }
+      mockInvitesService.getByToken.mockReturnValue(invite)
+      mockInvitesService.isPrefillEmailTaken.mockReturnValue(true)
+
+      expect(controller.validate('t')).toEqual({
+        valid: false,
+        reason: 'This invite\'s email address is already in use. Ask your admin for a new invite.',
+      })
+      expect(mockInvitesService.isPrefillEmailTaken).toHaveBeenCalledWith(invite)
     })
   })
 

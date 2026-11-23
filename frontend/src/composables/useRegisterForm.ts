@@ -20,6 +20,8 @@ export function usernameError(username: string, pattern: string = usernamePatter
 
 export interface InviteValidation {
   valid: boolean
+  /** Why an invalid invite cannot be redeemed, when the server can say more than "invalid, expired, or used". */
+  reason?: string
   groups?: string[]
   email?: string
   displayname?: string
