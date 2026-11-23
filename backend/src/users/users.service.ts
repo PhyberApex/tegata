@@ -558,8 +558,8 @@ export class UsersService implements OnModuleInit {
     this.mutateDatabase((db) => {
       this.assertUsernameFree(db, username)
       this.assertEmailFree(db, email)
-      // Registered here, not before the hash: a Group Deletion during the hash would otherwise leave this user
-      // naming a group with no row. A refused create registers nothing.
+      // Under the write, after the hash, so a Group Deletion during the hash can't leave this user naming a group
+      // with no row — and a create refused for a taken username or email registers no group.
       for (const group of groups)
         this.groupsService.ensureGroup(group)
       // defineProperty, not assignment: `db.users['__proto__'] = …` would swap the prototype instead.

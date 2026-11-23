@@ -40,7 +40,7 @@ describe('group Deletion', () => {
   }
 
   /** A fresh boot of the services on the same two files — `init()` runs Group Seeding. */
-  async function boot(): Promise<{ groups: GroupsService, deletion: GroupDeletionService, db: DatabaseService }> {
+  async function boot(): Promise<{ groups: GroupsService, deletion: GroupDeletionService, db: DatabaseService, users: UsersService }> {
     await module?.close()
     module = await Test.createTestingModule({
       providers: [
@@ -59,6 +59,7 @@ describe('group Deletion', () => {
       groups: module.get(GroupsService),
       deletion: module.get(GroupDeletionService),
       db: module.get(DatabaseService),
+      users: module.get(UsersService),
     }
   }
 
@@ -95,17 +96,17 @@ describe('group Deletion', () => {
     rmSync(dir, { recursive: true, force: true })
   })
 
-  it('keeps a group deleted while a createUser naming it is hashing, since the user lands in it', async () => {
+  it('re-creates a group deleted while a createUser naming it is hashing, since the user lands in it', async () => {
     writeUsers({
       admin: {
         groups: ['tegata'],
       },
     })
-    const { groups, deletion } = await boot()
+    const { groups, deletion, users } = await boot()
     // The invite's groups exist before redemption; the claimed invite no longer counts as pending.
     groups.ensureGroup('family')
 
-    const created = module!.get(UsersService).createUser('new', 'New', 'new@example.com', 'pass1234', ['family'])
+    const created = users.createUser('new', 'New', 'new@example.com', 'pass1234', ['family'])
     deletion.deleteGroup('family')
     await created
 
