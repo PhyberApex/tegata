@@ -113,8 +113,9 @@ From zero to an admin login, assuming Authelia is already running with the file 
   ![Banner: the users database was modified outside Tegata, with an Accept current state button](docs/screenshots/integrity-banner.png)
 
 - **Access Preview** — a read-only, per-group summary of what Authelia's `configuration.yml`
-  grants (the `{group}` domain placeholder, `group:` subject rules, OIDC authorization
-  policies), plus config-level notes such as an authorization policy no client references.
+  grants (the `{group}` domain placeholder, `group:` subject rules, subjectless rules granted
+  to everyone, OIDC authorization policies), plus config-level notes such as an authorization
+  policy no client references or an `access_control.default_policy` that isn't `deny`.
 
   ![Access preview for one group: the domains and OIDC apps Authelia grants it](docs/screenshots/access-preview.png)
 

@@ -91,16 +91,17 @@ function domainCovers(outer: string, inner: string): boolean {
 // what decided a domain first: a deny, or a grant to every group
 type DecidedBy = 'deny' | 'everyone'
 
-interface DecidedEntry {
-  group: string
-  pattern: string
-  by: DecidedBy
+const DECIDER_PHRASES: Record<DecidedBy, string> = {
+  deny: 'an earlier deny rule',
+  everyone: 'an earlier rule for everyone',
 }
 
 interface CarveOut {
   pattern: string
   by: DecidedBy
 }
+
+type DecidedEntry = CarveOut & { group: string }
 
 interface GrantDecision {
   allowed: boolean
@@ -119,30 +120,24 @@ class DecidedDomains {
   // groups undefined means the deny names no subject and so matches everyone
   deny(domain: string, groups: string[] | undefined): void {
     if (domain.includes(GROUP_PLACEHOLDER)) {
-      for (const group of groups ?? this.knownGroups) {
-        this.entries.push({
-          group,
-          pattern: domain.replaceAll(GROUP_PLACEHOLDER, group).toLowerCase(),
-          by: 'deny',
-        })
-      }
+      for (const group of groups ?? this.knownGroups)
+        this.record(group, domain.replaceAll(GROUP_PLACEHOLDER, group), 'deny')
       return
     }
-    for (const group of groups ?? [EVERYONE]) {
-      this.entries.push({
-        group,
-        pattern: domain.toLowerCase(),
-        by: 'deny',
-      })
-    }
+    for (const group of groups ?? [EVERYONE])
+      this.record(group, domain, 'deny')
   }
 
   // a subjectless grant has matched every group's request for its literal domain
   grantEveryone(domain: string): void {
+    this.record(EVERYONE, domain, 'everyone')
+  }
+
+  private record(group: string, domain: string, by: DecidedBy): void {
     this.entries.push({
-      group: EVERYONE,
+      group,
       pattern: domain.toLowerCase(),
-      by: 'everyone',
+      by,
     })
   }
 
@@ -218,13 +213,14 @@ function matchPlaceholder(attrs: RuleAttributes): RuleClassification | undefined
 }
 
 // a rule naming no subject and no qualifier matches every group's request to its
-// literal domains, so like a subjectless deny it decides them for everyone
+// literal domains, so like a subjectless deny it decides them for everyone.
+// domain_regex is OR'd with domain, so the literal domains still match — the
+// regex itself isn't modeled
 function matchEveryone(rule: AccessRule, attrs: RuleAttributes): RuleClassification | undefined {
   const everyone = attrs.subjects.length === 0
     && rule.subject === undefined
     && attrs.placeholderDomains.length === 0
     && attrs.qualifiers.length === 0
-    && rule.domain_regex === undefined
     && attrs.domains.length > 0
   return everyone
     ? { kind: 'everyone', domains: attrs.domains, policy: attrs.policy }
@@ -280,53 +276,59 @@ function classifyAccessRule(rule: AccessRule, knownGroups: string[]): RuleClassi
     ?? matchUnparsed(attrs, knownGroups)
 }
 
-function applyDeny(domains: string[], groups: string[] | undefined, denied: DecidedDomains): void {
+function applyDeny(domains: string[], groups: string[] | undefined, decided: DecidedDomains): void {
   for (const domain of domains)
-    denied.deny(domain, groups)
+    decided.deny(domain, groups)
 }
 
 type GrantSource = GroupAccessPreview['domains'][number]['source']
 
-function applyGrant(group: string, domain: string, policy: string, source: GrantSource, denied: DecidedDomains, previewFor: PreviewFor): void {
-  const { allowed, carvedOut } = denied.decideGrant(group, domain)
+function applyGrant(group: string, domain: string, policy: string, source: GrantSource, decided: DecidedDomains, previewFor: PreviewFor): void {
+  const { allowed, carvedOut } = decided.decideGrant(group, domain)
   if (!allowed)
     return
   const preview = previewFor(group)
   preview.domains.push({ domain, policy, source })
   if (carvedOut.length === 0)
     return
-  for (const by of ['deny', 'everyone'] as const) {
+  for (const [by, decider] of Object.entries(DECIDER_PHRASES)) {
     const patterns = carvedOut.filter(c => c.by === by).map(c => c.pattern)
     if (patterns.length === 0)
       continue
-    const decider = by === 'deny'
-      ? 'an earlier deny rule'
-      : 'an earlier rule for everyone'
     const note = `${domain} is granted except ${patterns.join(', ')}, which ${decider} decides`
     if (!preview.notes.includes(note))
       preview.notes.push(note)
   }
 }
 
-function applyPlaceholderGrants(domains: string[], policy: string, knownGroups: string[], denied: DecidedDomains, previewFor: PreviewFor): void {
+function applyPlaceholderGrants(domains: string[], policy: string, knownGroups: string[], decided: DecidedDomains, previewFor: PreviewFor): void {
   for (const group of knownGroups) {
     for (const domain of domains.map(d => d.replaceAll(GROUP_PLACEHOLDER, group)))
-      applyGrant(group, domain, policy, 'group-placeholder', denied, previewFor)
+      applyGrant(group, domain, policy, 'group-placeholder', decided, previewFor)
   }
 }
 
-function applyEveryoneGrant(domains: string[], policy: string, knownGroups: string[], denied: DecidedDomains, previewFor: PreviewFor): void {
+// an earlier grant of this group already matched every request to the domain,
+// so first-match never reaches a later rule for it
+function isAlreadyGranted(group: string, domain: string, previewFor: PreviewFor): boolean {
+  const target = domain.toLowerCase()
+  return previewFor(group).domains.some(grant => domainCovers(grant.domain.toLowerCase(), target))
+}
+
+function applyEveryoneGrant(domains: string[], policy: string, knownGroups: string[], decided: DecidedDomains, previewFor: PreviewFor): void {
   for (const domain of domains) {
-    for (const group of knownGroups)
-      applyGrant(group, domain, policy, 'everyone', denied, previewFor)
-    denied.grantEveryone(domain)
+    for (const group of knownGroups.filter(g => !isAlreadyGranted(g, domain, previewFor)))
+      applyGrant(group, domain, policy, 'everyone', decided, previewFor)
   }
+  // recorded only after the whole rule, so its own domains don't carve each other out
+  for (const domain of domains)
+    decided.grantEveryone(domain)
 }
 
-function applyModeledGrant(domains: string[], groups: string[], policy: string, denied: DecidedDomains, previewFor: PreviewFor): void {
+function applyModeledGrant(domains: string[], groups: string[], policy: string, decided: DecidedDomains, previewFor: PreviewFor): void {
   for (const group of groups) {
     for (const domain of domains)
-      applyGrant(group, domain, policy, 'group-subject', denied, previewFor)
+      applyGrant(group, domain, policy, 'group-subject', decided, previewFor)
   }
 }
 
@@ -336,23 +338,23 @@ function applyUnparsedRuleNotes(groups: string[], rule: AccessRule, previewFor: 
 }
 
 function collectAccessRuleGrants(rules: AccessRule[], knownGroups: string[], previewFor: PreviewFor): void {
-  const denied = new DecidedDomains(knownGroups)
+  const decided = new DecidedDomains(knownGroups)
   for (const rule of rules) {
     const classification = classifyAccessRule(rule, knownGroups)
     switch (classification.kind) {
       case 'skip':
         continue
       case 'deny':
-        applyDeny(classification.domains, classification.groups, denied)
+        applyDeny(classification.domains, classification.groups, decided)
         continue
       case 'placeholder':
-        applyPlaceholderGrants(classification.domains, classification.policy, knownGroups, denied, previewFor)
+        applyPlaceholderGrants(classification.domains, classification.policy, knownGroups, decided, previewFor)
         continue
       case 'everyone':
-        applyEveryoneGrant(classification.domains, classification.policy, knownGroups, denied, previewFor)
+        applyEveryoneGrant(classification.domains, classification.policy, knownGroups, decided, previewFor)
         continue
       case 'modeled':
-        applyModeledGrant(classification.domains, classification.groups, classification.policy, denied, previewFor)
+        applyModeledGrant(classification.domains, classification.groups, classification.policy, decided, previewFor)
         continue
       case 'unparsed':
         applyUnparsedRuleNotes(classification.groups, rule, previewFor)

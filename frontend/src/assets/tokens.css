@@ -345,7 +345,8 @@ body {
   font-size: var(--tg-font-sm);
 }
 
-.tg-access-item-group {
+.tg-access-item-group,
+.tg-access-item-scope {
   font-size: var(--tg-font-xs);
   white-space: nowrap;
 }
