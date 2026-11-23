@@ -29,9 +29,8 @@ export class AuthController {
   ) {}
 
   /**
-   * Read per request through ConfigService, not fixed from process.env at import: this module loads
-   * before ConfigModule.forRoot() copies .env into the environment, so a NODE_ENV set only in .env
-   * would otherwise be missed.
+   * Resolved per request through ConfigService: this module is imported before ConfigModule.forRoot()
+   * copies .env into the environment, so a NODE_ENV read at import would miss one set only in .env.
    */
   private cookieBase() {
     return {

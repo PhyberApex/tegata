@@ -44,7 +44,7 @@ describe('authController', () => {
   let mockAuthService: Mocked<Pick<AuthService, 'login' | 'verifyToken' | 'loginWithOidc'>>
   let mockOidcService: Mocked<Pick<OidcService, 'buildAuthorizationUrl' | 'exchangeCode' | 'getRequiredGroup'>>
   let mockUsersService: Mocked<Pick<UsersService, 'lookupAccount'>>
-  /** What the mocked ConfigService holds, i.e. `.env` merged over the real environment. */
+  /** What the mocked ConfigService holds, i.e. the real environment with `.env` filling the gaps. */
   let configValues: Record<string, string>
 
   beforeEach(async () => {
@@ -366,6 +366,7 @@ describe('authController', () => {
       expect(mockRes.redirect).toHaveBeenCalledWith('/login?error=sso_failed')
     })
   })
+
   describe('the Secure cookie flag', () => {
     const oidcState = JSON.stringify({ state: 'abc', codeVerifier: 'ver' })
 
