@@ -24,13 +24,12 @@ function declarationsOf(selector: string): Record<string, string> {
 const rootVars = declarationsOf(':root')
 
 function resolve(value: string): string {
-  const resolved = value.replace(/var\((--[\w-]+)\)/g, (_, name: string) => {
+  return value.replace(/var\((--[\w-]+)\)/g, (_, name: string) => {
     const token = rootVars[name]
     if (token === undefined)
       throw new Error(`Undefined token ${name}`)
     return resolve(token)
   })
-  return resolved
 }
 
 function parseColor(value: string): Rgba {
@@ -85,7 +84,7 @@ function contrast(fg: string, bg: string, page = '--tg-bg-base'): number {
 const surfaces = ['--tg-bg-base', '--tg-bg-raised', '--tg-bg-overlay'] as const
 
 describe('colour token contrast (WCAG 2.2)', () => {
-  it('reads the CSS it measures', () => {
+  it('computes the WCAG ratio of white on the original accent', () => {
     expect(contrast('#ffffff', '#0ea5e9')).toBeCloseTo(2.77, 2)
   })
 
@@ -126,7 +125,7 @@ describe('colour token contrast (WCAG 2.2)', () => {
   })
 
   it.each(['--tg-bg-input', ...surfaces])('input border passes 3:1 against %s', (surface) => {
-    const border = declarationsOf('.tg-input').border!.split(' ').slice(2).join(' ')
+    const border = /var\(--[\w-]+\)|#[0-9a-f]{6}/i.exec(declarationsOf('.tg-input').border!)![0]
     expect(contrast(border, `var(${surface})`)).toBeGreaterThanOrEqual(3)
   })
 })

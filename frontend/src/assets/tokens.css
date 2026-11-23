@@ -20,6 +20,8 @@
   --tg-accent: #0ea5e9;
   --tg-accent-hover: #38bdf8;
   --tg-accent-muted: rgba(14, 165, 233, 0.15);
+  /* Light text on the accent cannot reach 4.5:1. */
+  --tg-accent-ink: #04121c;
 
   /* ── Semantic ── */
   --tg-success: #22c55e;
@@ -115,10 +117,9 @@ body {
   outline-offset: 2px;
 }
 
-/* Dark ink on the accent: white on #0ea5e9 is under 3:1. */
 .tg-btn-primary {
   background: var(--tg-accent);
-  color: #04121c;
+  color: var(--tg-accent-ink);
   font-weight: 600;
 }
 
