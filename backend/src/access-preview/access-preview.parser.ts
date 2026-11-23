@@ -59,7 +59,7 @@ function isLeadingPlaceholder(domain: string): boolean {
     && !domain.slice(GROUP_PLACEHOLDER.length).includes(GROUP_PLACEHOLDER)
 }
 
-function substitutePlaceholder(domain: string, group: string): string {
+function substituteLeadingPlaceholder(domain: string, group: string): string {
   return group + domain.slice(GROUP_PLACEHOLDER.length)
 }
 
@@ -138,7 +138,7 @@ class DecidedDomains {
   deny(domain: string, groups: string[] | undefined): void {
     if (isLeadingPlaceholder(domain)) {
       for (const group of groups ?? this.knownGroups)
-        this.record(group, substitutePlaceholder(domain, group), 'deny')
+        this.record(group, substituteLeadingPlaceholder(domain, group), 'deny')
       return
     }
     for (const group of groups ?? [EVERYONE])
@@ -181,13 +181,12 @@ interface RuleAttributes {
   groups: string[]
   policy: string
   qualifiers: string[]
-  // every domain naming {group}, wherever it sits
   placeholderDomains: string[]
 }
 
 type RuleClassification
   = | { kind: 'skip' }
-    | { kind: 'deny', domains: string[], groups: string[] | undefined }
+    | { kind: 'deny', domains: string[], groups: string[] | undefined, notedGroups: string[] }
     | { kind: 'placeholder', domains: string[], literalDomains: string[], policy: string }
     | { kind: 'everyone', domains: string[], policy: string }
     | { kind: 'modeled', domains: string[], groups: string[], policy: string }
@@ -212,8 +211,8 @@ function parseRuleAttributes(rule: AccessRule): RuleAttributes {
 // a deny never unlocks anything, but one that matches every request to its
 // domains decides them for every later rule; a qualified one decides nothing.
 // domain_regex is OR'd with domain, so the literal domains still decide — the
-// regex itself isn't modeled, so a deny with nothing but a regex is noted for
-// the groups it may decide
+// regex itself isn't modeled, so a deny that decides only through a regex, or
+// through a {group} this preview can't substitute, is noted for its groups
 function matchDeny(rule: AccessRule, attrs: RuleAttributes, knownGroups: string[]): RuleClassification | undefined {
   if (attrs.policy !== 'deny')
     return undefined
@@ -221,20 +220,25 @@ function matchDeny(rule: AccessRule, attrs: RuleAttributes, knownGroups: string[
     return { kind: 'skip' }
   // an empty, null or non-string subject names nobody, so the deny matches everyone
   const subjectless = attrs.subjects.length === 0
-  if (attrs.domains.length === 0 && isSet(rule.domain_regex)) {
-    return {
-      kind: 'unparsed',
-      groups: subjectless
-        ? knownGroups
-        : [
-            ...new Set(attrs.groups),
-          ],
-    }
-  }
+  const domains = attrs.domains.filter(d => !d.includes(GROUP_PLACEHOLDER) || isLeadingPlaceholder(d))
+  const unmodeled = domains.length < attrs.domains.length
+    || (attrs.domains.length === 0 && isSet(rule.domain_regex))
+  const notedGroups = !unmodeled
+    ? []
+    : subjectless
+      ? knownGroups
+      : [
+          ...new Set(attrs.groups),
+        ]
   const groups = subjectless
     ? undefined
     : wholeSubjectGroups(rule.subject)
-  return { kind: 'deny', domains: attrs.domains, groups }
+  return {
+    kind: 'deny',
+    domains,
+    groups,
+    notedGroups,
+  }
 }
 
 function matchPlaceholder(attrs: RuleAttributes): RuleClassification | undefined {
@@ -256,8 +260,14 @@ function matchPlaceholder(attrs: RuleAttributes): RuleClassification | undefined
 // literal domains, so like a subjectless deny it decides them for everyone.
 // domain_regex is OR'd with domain, so the literal domains still match — the
 // regex itself isn't modeled
-function matchEveryone(attrs: RuleAttributes): RuleClassification | undefined {
-  const everyone = attrs.subjects.length === 0
+// a subject that is present but holds no string is a typo rather than
+// everyone, so only an absent or empty one grants every group
+function isAbsentSubject(subject: unknown): boolean {
+  return !isSet(subject) || (Array.isArray(subject) && subject.length === 0)
+}
+
+function matchEveryone(rule: AccessRule, attrs: RuleAttributes): RuleClassification | undefined {
+  const everyone = isAbsentSubject(rule.subject)
     && attrs.placeholderDomains.length === 0
     && attrs.qualifiers.length === 0
     && attrs.domains.length > 0
@@ -309,7 +319,7 @@ function classifyAccessRule(rule: AccessRule, knownGroups: string[]): RuleClassi
   const attrs = parseRuleAttributes(rule)
   return matchDeny(rule, attrs, knownGroups)
     ?? matchPlaceholder(attrs)
-    ?? matchEveryone(attrs)
+    ?? matchEveryone(rule, attrs)
     ?? matchNoGroupSkip(attrs)
     ?? matchModeled(rule, attrs)
     ?? matchUnparsed(attrs, knownGroups)
@@ -351,7 +361,7 @@ function applyGrant(group: string, domain: string, policy: string, source: Grant
 
 function applyPlaceholderGrants(domains: string[], policy: string, knownGroups: string[], decided: DecidedDomains, previewFor: PreviewFor): void {
   for (const group of knownGroups) {
-    for (const domain of domains.map(d => substitutePlaceholder(d, group)))
+    for (const domain of domains.map(d => substituteLeadingPlaceholder(d, group)))
       applyGrant(group, domain, policy, 'group-placeholder', decided, previewFor)
   }
 }
@@ -387,6 +397,7 @@ function collectAccessRuleGrants(rules: AccessRule[], knownGroups: string[], pre
         continue
       case 'deny':
         applyDeny(classification.domains, classification.groups, decided)
+        applyUnparsedRuleNotes(classification.notedGroups, rule, previewFor)
         continue
       case 'placeholder':
         applyPlaceholderGrants(classification.domains, classification.policy, knownGroups, decided, previewFor)
