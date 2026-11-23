@@ -184,4 +184,44 @@ describe('modalOverlay', () => {
     expect(document.body.querySelector('[role="dialog"]')).toBeNull()
     expect(document.activeElement).toBe(opener)
   })
+
+  describe('backdrop click', () => {
+    function overlay(): HTMLElement {
+      const el = document.body.querySelector<HTMLElement>('.overlay')
+      if (!el)
+        throw new Error('No overlay rendered')
+      return el
+    }
+
+    function mousedown(target: HTMLElement) {
+      target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+    }
+
+    // A drag released outside the card dispatches click on the common
+    // ancestor, the overlay, so the press target is what tells them apart.
+    it('does not emit close when the press began inside the dialog', async () => {
+      const wrapper = mountModal()
+      await nextTick()
+      mousedown(document.getElementById('slot-input')!)
+      overlay().click()
+      expect(wrapper.emitted('close')).toBeUndefined()
+    })
+
+    it('emits close once when the press and the click are both on the backdrop', async () => {
+      const wrapper = mountModal()
+      await nextTick()
+      mousedown(overlay())
+      overlay().click()
+      expect(wrapper.emitted('close')).toHaveLength(1)
+    })
+
+    it('does not carry a backdrop press over to a later drag from inside', async () => {
+      const wrapper = mountModal()
+      await nextTick()
+      mousedown(overlay())
+      mousedown(document.getElementById('slot-input')!)
+      overlay().click()
+      expect(wrapper.emitted('close')).toBeUndefined()
+    })
+  })
 })

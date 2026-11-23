@@ -33,6 +33,22 @@ function isTopMost(): boolean {
 
 let opener: HTMLElement | null = null
 
+// A text-selection drag that starts in the card and ends past its edge fires
+// click on the common ancestor, the overlay, so `.self` alone would close the
+// dialog. Only a click whose press also began on the backdrop closes it.
+let pressedOnBackdrop = false
+
+function onOverlayMousedown(event: MouseEvent) {
+  pressedOnBackdrop = event.target === event.currentTarget
+}
+
+function onOverlayClick(event: MouseEvent) {
+  const fromBackdrop = pressedOnBackdrop
+  pressedOnBackdrop = false
+  if (event.target === event.currentTarget && fromBackdrop)
+    emit('close')
+}
+
 onMounted(() => {
   // Listening on the document, not the dialog, keeps Escape and the trap working
   // when focus has fallen back to <body>, e.g. from a Confirm button the browser
@@ -86,7 +102,7 @@ function onKeydown(event: KeyboardEvent) {
 
 <template>
   <Teleport to="body">
-    <div class="overlay" @click.self="emit('close')">
+    <div class="overlay" @mousedown="onOverlayMousedown" @click="onOverlayClick">
       <div
         ref="dialogEl"
         class="modal tg-card"
