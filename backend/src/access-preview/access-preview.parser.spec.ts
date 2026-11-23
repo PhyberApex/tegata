@@ -273,6 +273,160 @@ describe('buildAccessPreviews', () => {
       expect(previewFor(previews, 'media').domains).toEqual([])
     })
 
+    it('should let a group-subject wildcard deny decide its subdomains for that group only', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: '*.example.com', subject: 'group:guests', policy: 'deny' },
+            {
+              domain: 'app.example.com',
+              subject: [
+                'group:guests',
+                'group:family',
+              ],
+              policy: 'one_factor',
+            },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family', 'guests'])
+
+      expect(previewFor(previews, 'guests').domains).toEqual([])
+      expect(previewFor(previews, 'family').domains).toEqual([
+        { domain: 'app.example.com', policy: 'one_factor', source: 'group-subject' },
+      ])
+    })
+
+    it('should let a subjectless wildcard deny decide its subdomains for every group', () => {
+      const config = {
+        access_control: {
+          rules: [
+            {
+              domain: ['*.internal.example.com'],
+              policy: 'deny',
+            },
+            { domain: 'db.internal.example.com', subject: 'group:family', policy: 'one_factor' },
+            { domain: 'App.Internal.Example.com', subject: 'group:guests', policy: 'one_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family', 'guests'])
+
+      expect(previewFor(previews, 'family').domains).toEqual([])
+      expect(previewFor(previews, 'guests').domains).toEqual([])
+    })
+
+    it('should let a wildcard deny decide a later placeholder grant', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: '*.example.com', subject: 'group:guests', policy: 'deny' },
+            { domain: '{group}.example.com', policy: 'two_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family', 'guests'])
+
+      expect(previewFor(previews, 'guests').domains).toEqual([])
+      expect(previewFor(previews, 'family').domains).toEqual([
+        { domain: 'family.example.com', policy: 'two_factor', source: 'group-placeholder' },
+      ])
+    })
+
+    it('should not let a wildcard deny decide its apex or an unrelated domain', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: '*.example.com', policy: 'deny' },
+            {
+              domain: [
+                'example.com',
+                'other.org',
+                'notexample.com',
+              ],
+              subject: 'group:family',
+              policy: 'one_factor',
+            },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family'])
+
+      expect(previewFor(previews, 'family').domains).toEqual([
+        { domain: 'example.com', policy: 'one_factor', source: 'group-subject' },
+        { domain: 'other.org', policy: 'one_factor', source: 'group-subject' },
+        { domain: 'notexample.com', policy: 'one_factor', source: 'group-subject' },
+      ])
+    })
+
+    it('should let a wildcard deny decide a later wildcard grant it is as broad as', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: '*.example.com', policy: 'deny' },
+            {
+              domain: [
+                '*.example.com',
+                '*.app.example.com',
+                '*.example.org',
+              ],
+              subject: 'group:family',
+              policy: 'one_factor',
+            },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family'])
+
+      expect(previewFor(previews, 'family').domains).toEqual([
+        { domain: '*.example.org', policy: 'one_factor', source: 'group-subject' },
+      ])
+    })
+
+    it('should keep a broader wildcard grant after a narrower deny and note the carve-out', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: 'a.example.com', subject: 'group:family', policy: 'deny' },
+            { domain: '*.example.com', subject: 'group:family', policy: 'one_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family'])
+      const family = previewFor(previews, 'family')
+
+      expect(family.domains).toEqual([
+        { domain: '*.example.com', policy: 'one_factor', source: 'group-subject' },
+      ])
+      expect(family.notes).toEqual([
+        '*.example.com is granted except a.example.com, which an earlier deny rule decides',
+      ])
+    })
+
+    it('should note a narrower wildcard deny once however many grants it carves out of', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: '*.a.example.com', policy: 'deny' },
+            { domain: '*.example.com', subject: 'group:family', policy: 'one_factor' },
+            { domain: '*.example.com', subject: 'group:family', policy: 'two_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family'])
+
+      expect(previewFor(previews, 'family').notes).toEqual([
+        '*.example.com is granted except *.a.example.com, which an earlier deny rule decides',
+      ])
+    })
+
     it('should honour a deny that follows the grant', () => {
       const config = {
         access_control: {
