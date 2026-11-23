@@ -20,7 +20,7 @@ function endSession() {
   router.push({ name: 'login' })
 }
 
-/** The JSON object an error response carries, or `{}` when it is not JSON (a proxy's HTML 502) or not an object. */
+/** A proxy's 502/503 page is HTML, not JSON, and a `null` body would crash `body.message`, so anything but an object becomes `{}`. */
 async function errorBody(res: Response): Promise<Record<string, unknown>> {
   const parsed: unknown = await res.json().catch(() => null)
   return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
@@ -35,9 +35,9 @@ async function errorBody(res: Response): Promise<Record<string, unknown>> {
 function errorMessage(body: Record<string, unknown>, res: Response): string {
   const { message } = body
   const text = Array.isArray(message)
-    ? message.filter(m => typeof m === 'string' && m !== '').join('; ')
+    ? message.filter(m => typeof m === 'string' && m.trim() !== '').join('; ')
     : typeof message === 'string'
-      ? message
+      ? message.trim()
       : ''
   return text || res.statusText || `Request failed (${res.status})`
 }
