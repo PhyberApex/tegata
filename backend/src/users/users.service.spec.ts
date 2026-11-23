@@ -470,6 +470,19 @@ describe('usersService', () => {
       expect(Object.keys(writtenUsers())).toEqual(['alice', 'bob', 'charlie'])
     })
 
+    it('should not register the groups of a createUser refused with a 409 after the hash', async () => {
+      useInMemoryUsersFile(USERS_YAML)
+      const hashes = deferredHashes()
+
+      const first = service.createUser('charlie', 'Charlie', 'charlie@test.com', 'pass1234', [])
+      const second = service.createUser('charlie', 'Other Charlie', 'other@test.com', 'pass5678', ['media'])
+      hashes.resolveAll()
+
+      await expect(first).resolves.toMatchObject({ username: 'charlie' })
+      await expect(second).rejects.toThrow(ConflictException)
+      expect(mockGroupsService.ensureGroup).not.toHaveBeenCalled()
+    })
+
     it('should keep both users when two createUser calls overlap', async () => {
       useInMemoryUsersFile(USERS_YAML)
       const hashes = deferredHashes()

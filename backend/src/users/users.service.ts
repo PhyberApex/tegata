@@ -553,14 +553,15 @@ export class UsersService implements OnModuleInit {
     this.assertUsernameFree(current, username)
     this.assertEmailFree(current, email)
 
-    for (const group of groups)
-      this.groupsService.ensureGroup(group)
-
     const passwordHash = await argon2.hash(password, this.argon2Options)
 
     this.mutateDatabase((db) => {
       this.assertUsernameFree(db, username)
       this.assertEmailFree(db, email)
+      // Registered here, not before the hash: a Group Deletion during the hash would otherwise leave this user
+      // naming a group with no row. A refused create registers nothing.
+      for (const group of groups)
+        this.groupsService.ensureGroup(group)
       // defineProperty, not assignment: `db.users['__proto__'] = …` would swap the prototype instead.
       Object.defineProperty(db.users, username, {
         value: {

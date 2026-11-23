@@ -95,6 +95,24 @@ describe('group Deletion', () => {
     rmSync(dir, { recursive: true, force: true })
   })
 
+  it('keeps a group deleted while a createUser naming it is hashing, since the user lands in it', async () => {
+    writeUsers({
+      admin: {
+        groups: ['tegata'],
+      },
+    })
+    const { groups, deletion } = await boot()
+    // The invite's groups exist before redemption; the claimed invite no longer counts as pending.
+    groups.ensureGroup('family')
+
+    const created = module!.get(UsersService).createUser('new', 'New', 'new@example.com', 'pass1234', ['family'])
+    deletion.deleteGroup('family')
+    await created
+
+    expect(groups.getGroupNames()).toContain('family')
+    expect(readUsers().new.groups).toEqual(['family'])
+  })
+
   it('refuses while a user is a member, naming them', async () => {
     writeUsers({
       alice: {
