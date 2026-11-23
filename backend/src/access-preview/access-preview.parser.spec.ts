@@ -765,33 +765,40 @@ describe('buildAccessPreviews', () => {
     })
 
     it('should surface an inner AND subject as a note only', () => {
-      const oddConfig = {
-        identity_providers: {
-          oidc: {
-            authorization_policies: {
-              odd: {
-                rules: [
-                  {
-                    policy: 'two_factor',
-                    subject: [
-                      ['group:media', 'user:bob'],
-                    ],
-                  },
-                ],
-              },
-            },
-            clients: [
-              { client_id: 'app', client_name: 'App', authorization_policy: 'odd' },
-            ],
-          },
+      const previews = buildAccessPreviews(policyConfig([
+        {
+          policy: 'two_factor',
+          subject: [
+            ['group:media', 'user:bob'],
+          ],
         },
-      }
-
-      const previews = buildAccessPreviews(oddConfig, ['media'])
+      ]), ['media'])
 
       expect(previewFor(previews, 'media').oidcClients).toEqual([])
       expect(previewFor(previews, 'media').notes).toHaveLength(1)
-      expect(previewFor(previews, 'media').notes[0]).toContain('odd')
+      expect(previewFor(previews, 'media').notes[0]).toContain('home')
+    })
+
+    it('should not note a later unparsed rule for a group an earlier rule decided', () => {
+      const previews = buildAccessPreviews(policyConfig([
+        { policy: 'one_factor', subject: 'group:media' },
+        {
+          policy: 'two_factor',
+          subject: 'group:media',
+          networks: ['10.0.0.0/8'],
+        },
+        {
+          policy: 'two_factor',
+          subject: [
+            ['group:media', 'user:bob'],
+          ],
+        },
+      ]), ['media'])
+
+      expect(previewFor(previews, 'media').oidcClients).toEqual([
+        { clientName: 'App', policyName: 'home', policy: 'one_factor' },
+      ])
+      expect(previewFor(previews, 'media').notes).toEqual([])
     })
   })
 
