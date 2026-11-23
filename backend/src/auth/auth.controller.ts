@@ -1,6 +1,5 @@
 import type { AuthCheck } from '@tegata/shared'
 import type { Request, Response } from 'express'
-import process from 'node:process'
 import { Body, Controller, Get, Logger, Post, Req, Res, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { Throttle } from '@nestjs/throttler'
@@ -17,11 +16,6 @@ class LoginDto {
   password!: string
 }
 
-const COOKIE_BASE = {
-  httpOnly: true,
-  secure: cookiesAreSecure(process.env.NODE_ENV),
-} as const
-
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name)
@@ -33,6 +27,17 @@ export class AuthController {
     private config: ConfigService,
     private adminAccountCheck: AdminAccountCheck,
   ) {}
+
+  /**
+   * Resolved per request through ConfigService: this module is imported before ConfigModule.forRoot()
+   * copies .env into the environment, so a NODE_ENV read at import would miss one set only in .env.
+   */
+  private cookieBase() {
+    return {
+      httpOnly: true,
+      secure: cookiesAreSecure(this.config.get<string>('NODE_ENV')),
+    } as const
+  }
 
   /**
    * Which login doors this caller is offered. SSO is always one; native
@@ -59,7 +64,7 @@ export class AuthController {
     const token = await this.authService.login(dto.password, req.ip)
 
     res.cookie('tegata_token', token, {
-      ...COOKIE_BASE,
+      ...this.cookieBase(),
       sameSite: 'strict',
       maxAge: 24 * 60 * 60 * 1000,
     })
@@ -96,7 +101,7 @@ export class AuthController {
       const { url, state, codeVerifier } = await this.oidcService.buildAuthorizationUrl()
 
       res.cookie('oidc_state', JSON.stringify({ state, codeVerifier }), {
-        ...COOKIE_BASE,
+        ...this.cookieBase(),
         sameSite: 'lax',
         maxAge: 10 * 60 * 1000,
       })
@@ -132,7 +137,7 @@ export class AuthController {
 
       const token = this.authService.loginWithOidc(username, isAdmin)
       res.cookie('tegata_token', token, {
-        ...COOKIE_BASE,
+        ...this.cookieBase(),
         sameSite: 'strict',
         maxAge: 24 * 60 * 60 * 1000,
       })

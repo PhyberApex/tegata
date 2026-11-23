@@ -22,8 +22,6 @@ async function bootstrap() {
 
   const logger = new DynamicLogger('log')
   setDynamicLoggerInstance(logger)
-  // process.env, not ConfigService: the cookie flag is fixed from it when the auth controller loads
-  warnIfInsecureCookies(process.env.NODE_ENV, message => logger.warn(message, 'Bootstrap'))
   installFetchLogger({
     verbosePatterns: ['/metrics', '/health'],
   })
@@ -33,6 +31,8 @@ async function bootstrap() {
   const config = app.get(ConfigService)
   // Read through ConfigService, not process.env: it is what has loaded .env by now
   await assertSecrets(key => config.get<string>(key))
+  const nodeEnv = config.get<string>('NODE_ENV')
+  warnIfInsecureCookies(nodeEnv, message => logger.warn(message, 'Bootstrap'))
   const trustProxy = parseTrustProxy(config.get<string>('TRUST_PROXY'))
 
   // How many hops (or which addresses) between the client and Tegata to trust, so req.ip and
@@ -40,7 +40,7 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().set('trust proxy', trustProxy)
 
   // Same NODE_ENV source as the cookie flag, so headers and cookies agree on HTTP vs HTTPS
-  app.use(helmet(helmetOptions(process.env.NODE_ENV)))
+  app.use(helmet(helmetOptions(nodeEnv)))
   app.use(cookieParser())
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }))
   app.setGlobalPrefix('api', {

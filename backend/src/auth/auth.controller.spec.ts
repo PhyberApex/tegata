@@ -44,8 +44,11 @@ describe('authController', () => {
   let mockAuthService: Mocked<Pick<AuthService, 'login' | 'verifyToken' | 'loginWithOidc'>>
   let mockOidcService: Mocked<Pick<OidcService, 'buildAuthorizationUrl' | 'exchangeCode' | 'getRequiredGroup'>>
   let mockUsersService: Mocked<Pick<UsersService, 'lookupAccount'>>
+  /** What the mocked ConfigService holds, i.e. the real environment with `.env` filling the gaps. */
+  let configValues: Record<string, string>
 
   beforeEach(async () => {
+    configValues = {}
     mockAuthService = {
       login: vi.fn(),
       verifyToken: vi.fn(),
@@ -70,7 +73,7 @@ describe('authController', () => {
         {
           provide: ConfigService,
           useValue: {
-            get: (_key: string, fallback: string) => fallback,
+            get: (key: string, fallback?: string) => configValues[key] ?? fallback,
             getOrThrow: (key: string) => key === 'OIDC_REDIRECT_URI'
               ? 'https://tegata.example.com/api/auth/oidc/callback'
               : undefined,
@@ -361,6 +364,56 @@ describe('authController', () => {
       await controller.oidcCallback(mockReq, mockRes)
 
       expect(mockRes.redirect).toHaveBeenCalledWith('/login?error=sso_failed')
+    })
+  })
+
+  describe('the Secure cookie flag', () => {
+    const oidcState = JSON.stringify({ state: 'abc', codeVerifier: 'ver' })
+
+    async function cookieOptionsIssued(): Promise<Array<{ secure?: boolean }>> {
+      mockAuthService.login.mockResolvedValue('jwt-token')
+      mockAuthService.loginWithOidc.mockReturnValue('jwt-oidc-token')
+      mockOidcService.buildAuthorizationUrl.mockResolvedValue({
+        url: 'https://auth.example.com/authorize?state=abc',
+        state: 'abc',
+        codeVerifier: 'ver',
+      })
+      mockOidcService.exchangeCode.mockResolvedValue({
+        groups: ['tegata'],
+        username: 'alice',
+      })
+
+      const res = {
+        cookie: vi.fn(),
+        clearCookie: vi.fn(),
+        redirect: vi.fn(),
+      } as any
+      await controller.login({ password: 'admin-pass' }, { ip: '192.168.1.42' } as any, res)
+      await controller.oidcLogin(res)
+      await controller.oidcCallback({
+        cookies: { oidc_state: oidcState },
+        originalUrl: '/api/auth/oidc/callback?code=xyz&state=abc',
+      } as any, res)
+
+      expect(res.cookie.mock.calls.map(([name]: [string]) => name)).toEqual(['tegata_token', 'oidc_state', 'tegata_token'])
+      return res.cookie.mock.calls.map(([, , options]: [string, string, { secure?: boolean }]) => options)
+    }
+
+    it('is set when NODE_ENV=production comes only from ConfigService (.env), not process.env', async () => {
+      // vitest runs with process.env.NODE_ENV=test, so only ConfigService says production
+      configValues.NODE_ENV = 'production'
+
+      const options = await cookieOptionsIssued()
+
+      expect(options.map(o => o.secure)).toEqual([true, true, true])
+    })
+
+    it('is not set when NODE_ENV is development', async () => {
+      configValues.NODE_ENV = 'development'
+
+      const options = await cookieOptionsIssued()
+
+      expect(options.map(o => o.secure)).toEqual([false, false, false])
     })
   })
 })
