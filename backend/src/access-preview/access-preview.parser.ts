@@ -74,31 +74,67 @@ type PreviewFor = (group: string) => GroupAccessPreview
 
 const EVERYONE = '\u0000everyone'
 
+const WILDCARD_PREFIX = '*.'
+
+// Authelia matches a domain exactly (case-insensitive), or — for a pattern with
+// a leading `*.` — any subdomain of the rest. Wildcard against wildcard covers
+// when `pattern`'s suffix is the same as or broader than `domain`'s
+function domainCovers(pattern: string, domain: string): boolean {
+  if (pattern === domain)
+    return true
+  return pattern.startsWith(WILDCARD_PREFIX)
+    && domain.endsWith(pattern.slice(WILDCARD_PREFIX.length - 1))
+}
+
+interface DenyEntry {
+  group: string
+  pattern: string
+}
+
+interface DenyCheck {
+  allowed: boolean
+  // earlier denies the grant's wildcard is broader than: they still decide
+  // their own domains, so the grant reaches everything but those
+  carvedOut: string[]
+}
+
 // Authelia's rules are first-match, so once a deny has decided a group's
 // request for a domain no later rule is consulted for it
 class DeniedDomains {
-  private readonly keys = new Set<string>()
+  private readonly entries: DenyEntry[] = []
 
   constructor(private readonly knownGroups: string[]) {}
-
-  private static key(group: string, domain: string): string {
-    return `${group}\u0000${domain.toLowerCase()}`
-  }
 
   // groups undefined means the deny names no subject and so matches everyone
   deny(domain: string, groups: string[] | undefined): void {
     if (domain.includes(GROUP_PLACEHOLDER)) {
-      for (const group of groups ?? this.knownGroups)
-        this.keys.add(DeniedDomains.key(group, domain.replaceAll(GROUP_PLACEHOLDER, group)))
+      for (const group of groups ?? this.knownGroups) {
+        this.entries.push({
+          group,
+          pattern: domain.replaceAll(GROUP_PLACEHOLDER, group).toLowerCase(),
+        })
+      }
       return
     }
-    for (const group of groups ?? [EVERYONE])
-      this.keys.add(DeniedDomains.key(group, domain))
+    for (const group of groups ?? [EVERYONE]) {
+      this.entries.push({
+        group,
+        pattern: domain.toLowerCase(),
+      })
+    }
   }
 
-  allows(group: string, domain: string): boolean {
-    return !this.keys.has(DeniedDomains.key(EVERYONE, domain))
-      && !this.keys.has(DeniedDomains.key(group, domain))
+  check(group: string, domain: string): DenyCheck {
+    const target = domain.toLowerCase()
+    const applicable = this.entries.filter(e => e.group === EVERYONE || e.group === group)
+    if (applicable.some(e => domainCovers(e.pattern, target)))
+      return { allowed: false, carvedOut: [] }
+    return {
+      allowed: true,
+      carvedOut: [
+        ...new Set(applicable.filter(e => domainCovers(target, e.pattern)).map(e => e.pattern)),
+      ],
+    }
   }
 }
 
@@ -208,19 +244,27 @@ function applyDeny(domains: string[], groups: string[] | undefined, denied: Deni
     denied.deny(domain, groups)
 }
 
+function applyGrant(group: string, domain: string, policy: string, source: GroupAccessPreview['domains'][number]['source'], denied: DeniedDomains, previewFor: PreviewFor): void {
+  const { allowed, carvedOut } = denied.check(group, domain)
+  if (!allowed)
+    return
+  const preview = previewFor(group)
+  preview.domains.push({ domain, policy, source })
+  if (carvedOut.length > 0)
+    preview.notes.push(`${domain} is granted except ${carvedOut.join(', ')}, which an earlier deny rule decides`)
+}
+
 function applyPlaceholderGrants(domains: string[], policy: string, knownGroups: string[], denied: DeniedDomains, previewFor: PreviewFor): void {
   for (const group of knownGroups) {
-    for (const domain of domains.map(d => d.replaceAll(GROUP_PLACEHOLDER, group))) {
-      if (denied.allows(group, domain))
-        previewFor(group).domains.push({ domain, policy, source: 'group-placeholder' })
-    }
+    for (const domain of domains.map(d => d.replaceAll(GROUP_PLACEHOLDER, group)))
+      applyGrant(group, domain, policy, 'group-placeholder', denied, previewFor)
   }
 }
 
 function applyModeledGrant(domains: string[], groups: string[], policy: string, denied: DeniedDomains, previewFor: PreviewFor): void {
   for (const group of groups) {
-    for (const domain of domains.filter(d => denied.allows(group, d)))
-      previewFor(group).domains.push({ domain, policy, source: 'group-subject' })
+    for (const domain of domains)
+      applyGrant(group, domain, policy, 'group-subject', denied, previewFor)
   }
 }
 
