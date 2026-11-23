@@ -21,6 +21,9 @@ const domainItems = computed(() => !props.result.available
       name: grant.domain,
       policy: grant.policy,
       group: grant.group,
+      scope: grant.source === 'everyone'
+        ? 'everyone'
+        : undefined,
     })))
 
 const oidcClientItems = computed(() => !props.result.available

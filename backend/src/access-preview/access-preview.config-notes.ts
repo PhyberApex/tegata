@@ -7,6 +7,7 @@ const BUILTIN_POLICIES = ['one_factor', 'two_factor'] as const
 const DEFAULT_POLICY_NAME = 'two_factor'
 
 const KIND_ORDER: ConfigNoteKind[] = [
+  'open-default-policy',
   'shadowed-policy',
   'unreferenced-policy',
   'open-policy',
@@ -255,6 +256,21 @@ function buildStaleAcknowledgmentNotes(policies: Record<string, any>, references
   return notes
 }
 
+// Authelia defaults access_control.default_policy to deny when unset
+function buildOpenDefaultPolicyNotes(config: Record<string, any>): ConfigNote[] {
+  const defaultPolicy = config.access_control?.default_policy
+  if (typeof defaultPolicy !== 'string' || defaultPolicy === 'deny')
+    return []
+  return [
+    {
+      kind: 'open-default-policy',
+      policyName: defaultPolicy,
+      clientNames: [],
+      message: `access_control.default_policy is "${defaultPolicy}", so every domain no access_control rule matches is granted to every group with that policy.`,
+    },
+  ]
+}
+
 function sortNotes(notes: ConfigNote[]): ConfigNote[] {
   return [...notes].sort((a, b) => {
     const kindDiff = KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind)
@@ -276,6 +292,7 @@ export function buildConfigNotes(config: unknown, acknowledgedOpenPolicies: stri
   const acknowledged = new Set(acknowledgedOpenPolicies)
 
   const notes = [
+    ...buildOpenDefaultPolicyNotes(cfg),
     ...buildShadowedPolicyNotes(policies, references),
     ...buildUnreferencedPolicyNotes(policies, references),
     ...buildOpenPolicyNotes(policies, references, acknowledged),

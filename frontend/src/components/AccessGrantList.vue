@@ -1,7 +1,7 @@
 <script setup lang="ts">
 defineProps<{
   title: string
-  items: Array<{ key: string, name: string, policy: string, group: string }>
+  items: Array<{ key: string, name: string, policy: string, group: string, scope?: string }>
   showGroup: boolean
 }>()
 </script>
@@ -16,6 +16,7 @@ defineProps<{
         <span class="tg-access-item-name">{{ item.name }}</span>
         <span class="tg-access-item-meta">
           <span class="tg-access-item-policy">{{ item.policy }}</span>
+          <span v-if="item.scope" class="tg-badge tg-access-item-scope">{{ item.scope }}</span>
           <span v-if="showGroup" class="tg-badge tg-access-item-group">{{ item.group }}</span>
         </span>
       </li>

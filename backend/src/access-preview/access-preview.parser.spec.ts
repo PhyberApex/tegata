@@ -24,19 +24,210 @@ describe('buildAccessPreviews', () => {
       const previews = buildAccessPreviews(config, ['media', 'recipes'])
 
       expect(previewFor(previews, 'media').domains).toEqual([
+        { domain: 'auth.example.com', policy: 'bypass', source: 'everyone' },
         { domain: 'media.example.com', policy: 'two_factor', source: 'group-placeholder' },
       ])
       expect(previewFor(previews, 'recipes').domains).toEqual([
+        { domain: 'auth.example.com', policy: 'bypass', source: 'everyone' },
         { domain: 'recipes.example.com', policy: 'two_factor', source: 'group-placeholder' },
       ])
     })
 
-    it('should not surface rules that reference no group', () => {
-      const previews = buildAccessPreviews(config, ['media'])
+    it('should grant a subjectless rule\'s domain to every known group', () => {
+      const previews = buildAccessPreviews(config, ['media', 'recipes'])
 
-      const media = previewFor(previews, 'media')
-      expect(media.domains).toHaveLength(1)
-      expect(media.notes).toEqual([])
+      for (const group of ['media', 'recipes']) {
+        const preview = previewFor(previews, group)
+        expect(preview.domains).toContainEqual({ domain: 'auth.example.com', policy: 'bypass', source: 'everyone' })
+        expect(preview.notes).toEqual([])
+      }
+    })
+  })
+
+  describe('subjectless grant rules', () => {
+    it('should keep the first match when a later group rule names the same domain', () => {
+      const config = {
+        access_control: {
+          default_policy: 'one_factor',
+          rules: [
+            { domain: 'wiki.example.com', policy: 'one_factor' },
+            { domain: 'wiki.example.com', subject: 'group:family', policy: 'two_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family', 'guests'])
+
+      expect(previewFor(previews, 'family').domains).toEqual([
+        { domain: 'wiki.example.com', policy: 'one_factor', source: 'everyone' },
+      ])
+      expect(previewFor(previews, 'guests').domains).toEqual([
+        { domain: 'wiki.example.com', policy: 'one_factor', source: 'everyone' },
+      ])
+    })
+
+    it('should let a subjectless wildcard grant decide its subdomains for a later group rule', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: '*.example.com', policy: 'one_factor' },
+            { domain: 'app.example.com', subject: 'group:family', policy: 'two_factor' },
+            { domain: '{group}.example.com', policy: 'two_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family'])
+
+      expect(previewFor(previews, 'family').domains).toEqual([
+        { domain: '*.example.com', policy: 'one_factor', source: 'everyone' },
+      ])
+    })
+
+    it('should not grant a subjectless rule\'s domain that an earlier deny decides', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: 'wiki.example.com', subject: 'group:guests', policy: 'deny' },
+            { domain: 'wiki.example.com', policy: 'one_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family', 'guests'])
+
+      expect(previewFor(previews, 'family').domains).toEqual([
+        { domain: 'wiki.example.com', policy: 'one_factor', source: 'everyone' },
+      ])
+      expect(previewFor(previews, 'guests').domains).toEqual([])
+    })
+
+    it('should note a narrower subjectless grant that a later broader group grant carves around', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: 'a.example.com', policy: 'one_factor' },
+            { domain: '*.example.com', subject: 'group:family', policy: 'two_factor' },
+          ],
+        },
+      }
+
+      const family = previewFor(buildAccessPreviews(config, ['family']), 'family')
+
+      expect(family.domains).toEqual([
+        { domain: 'a.example.com', policy: 'one_factor', source: 'everyone' },
+        { domain: '*.example.com', policy: 'two_factor', source: 'group-subject' },
+      ])
+      expect(family.notes).toEqual([
+        '*.example.com is granted except a.example.com, which an earlier rule for everyone decides',
+      ])
+    })
+
+    it('should not list a subjectless grant for a group an earlier group rule already decided', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: 'wiki.example.com', subject: 'group:family', policy: 'two_factor' },
+            { domain: '{group}.example.com', policy: 'two_factor' },
+            {
+              domain: ['wiki.example.com', 'guests.example.com'],
+              policy: 'one_factor',
+            },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family', 'guests'])
+
+      expect(previewFor(previews, 'family').domains).toEqual([
+        { domain: 'wiki.example.com', policy: 'two_factor', source: 'group-subject' },
+        { domain: 'family.example.com', policy: 'two_factor', source: 'group-placeholder' },
+        { domain: 'guests.example.com', policy: 'one_factor', source: 'everyone' },
+      ])
+      expect(previewFor(previews, 'guests').domains).toEqual([
+        { domain: 'guests.example.com', policy: 'two_factor', source: 'group-placeholder' },
+        { domain: 'wiki.example.com', policy: 'one_factor', source: 'everyone' },
+      ])
+    })
+
+    it('should not carve one subjectless rule\'s domains out of each other', () => {
+      const config = {
+        access_control: {
+          rules: [
+            {
+              domain: ['a.example.com', '*.example.com'],
+              policy: 'one_factor',
+            },
+          ],
+        },
+      }
+
+      const family = previewFor(buildAccessPreviews(config, ['family']), 'family')
+
+      expect(family.domains).toHaveLength(2)
+      expect(family.notes).toEqual([])
+    })
+
+    it('should grant a subjectless rule\'s literal domains alongside a domain_regex', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: 'wiki.example.com', domain_regex: '^x\\.example\\.com$', policy: 'one_factor' },
+          ],
+        },
+      }
+
+      expect(previewFor(buildAccessPreviews(config, ['family']), 'family').domains).toEqual([
+        { domain: 'wiki.example.com', policy: 'one_factor', source: 'everyone' },
+      ])
+    })
+
+    it('should grant a subjectless rule\'s literal domains listed beside a placeholder domain', () => {
+      const config = {
+        access_control: {
+          rules: [
+            {
+              domain: ['{group}.example.com', 'wiki.example.com'],
+              policy: 'one_factor',
+            },
+            { domain: 'wiki.example.com', subject: 'group:family', policy: 'two_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family', 'guests'])
+
+      expect(previewFor(previews, 'family').domains).toEqual([
+        { domain: 'family.example.com', policy: 'one_factor', source: 'group-placeholder' },
+        { domain: 'wiki.example.com', policy: 'one_factor', source: 'everyone' },
+      ])
+      expect(previewFor(previews, 'guests').domains).toEqual([
+        { domain: 'guests.example.com', policy: 'one_factor', source: 'group-placeholder' },
+        { domain: 'wiki.example.com', policy: 'one_factor', source: 'everyone' },
+      ])
+    })
+
+    it('should skip a subjectless rule with qualifiers or a non-group subject', () => {
+      const config = {
+        access_control: {
+          rules: [
+            {
+              domain: 'wiki.example.com',
+              resources: ['^/api(/.*)?$'],
+              policy: 'bypass',
+            },
+            { domain: 'wiki.example.com', subject: 'user:bob', policy: 'one_factor' },
+            { domain: 'wiki.example.com', subject: 'group:family', policy: 'two_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family', 'guests'])
+
+      expect(previewFor(previews, 'family').domains).toEqual([
+        { domain: 'wiki.example.com', policy: 'two_factor', source: 'group-subject' },
+      ])
+      expect(previewFor(previews, 'guests').domains).toEqual([])
     })
   })
 

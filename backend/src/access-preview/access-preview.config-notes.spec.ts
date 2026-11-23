@@ -420,6 +420,26 @@ describe('buildConfigNotes', () => {
     })
   })
 
+  describe('open-default-policy', () => {
+    it.each(['one_factor', 'bypass'])('fires for access_control.default_policy: %s', (defaultPolicy) => {
+      const notes = buildConfigNotes({
+        access_control: { default_policy: defaultPolicy },
+      }, [])
+
+      expect(notes).toEqual([
+        expect.objectContaining({ kind: 'open-default-policy', policyName: defaultPolicy, clientNames: [] }),
+      ])
+    })
+
+    it('does not fire for access_control.default_policy: deny or when it is absent', () => {
+      expect(buildConfigNotes({
+        access_control: { default_policy: 'deny' },
+      }, [])).toEqual([])
+      expect(buildConfigNotes({ access_control: {} }, [])).toEqual([])
+      expect(buildConfigNotes({}, [])).toEqual([])
+    })
+  })
+
   describe('malformed input', () => {
     it('tolerates null, empty, and malformed shapes without throwing', () => {
       expect(buildConfigNotes(null, [])).toEqual([])

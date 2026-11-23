@@ -3,7 +3,7 @@
 export interface DomainGrant {
   domain: string
   policy: string
-  source: 'group-placeholder' | 'group-subject'
+  source: 'group-placeholder' | 'group-subject' | 'everyone'
 }
 
 export interface OidcClientGrant {
@@ -20,7 +20,8 @@ export interface GroupAccessPreview {
 }
 
 export type ConfigNoteKind
-  = | 'shadowed-policy'
+  = | 'open-default-policy'
+    | 'shadowed-policy'
     | 'unreferenced-policy'
     | 'open-policy'
     | 'shared-open-policy'
