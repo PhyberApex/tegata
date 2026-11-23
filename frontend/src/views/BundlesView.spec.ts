@@ -13,7 +13,8 @@ function jsonResponse(body: unknown, status = 200) {
 // Every test talks to Tegata the way the page does: fetch, stubbed at the boundary.
 const fetchMock = vi.fn()
 
-interface Request { method: string, url: string, body: unknown }
+type WriteMethod = 'POST' | 'PATCH' | 'DELETE'
+interface RecordedWrite { method: string, url: string, body: unknown }
 
 /**
  * A small in-memory bundles API. `failNext` makes the next matching write
@@ -24,8 +25,8 @@ function fakeBundlesApi(initial: Bundle[]) {
     ...b,
     groups: [...b.groups],
   }))
-  const writes: Request[] = []
-  const failures: Array<{ method: string, status: number, message: string }> = []
+  const writes: RecordedWrite[] = []
+  const failures: Array<{ method: WriteMethod, status: number, message: string }> = []
 
   fetchMock.mockImplementation((url: string, opts?: RequestInit) => {
     const method = opts?.method ?? 'GET'
@@ -69,7 +70,7 @@ function fakeBundlesApi(initial: Bundle[]) {
 
   return {
     writes,
-    failNext: (method: string, status: number, message: string) => {
+    failNext: (method: WriteMethod, status: number, message: string) => {
       failures.push({ method, status, message })
     },
   }
