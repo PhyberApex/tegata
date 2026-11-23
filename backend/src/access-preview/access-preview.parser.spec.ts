@@ -277,6 +277,26 @@ describe('buildAccessPreviews', () => {
       ])
     })
 
+    it('should list only the first policy when two rules grant one group the same domain', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: 'wiki.example.com', subject: 'group:family', policy: 'two_factor' },
+            { domain: 'wiki.example.com', subject: 'group:family', policy: 'one_factor' },
+            { domain: '{group}.example.com', policy: 'two_factor' },
+            { domain: 'family.example.com', subject: 'group:family', policy: 'one_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family'])
+
+      expect(previewFor(previews, 'family').domains).toEqual([
+        { domain: 'wiki.example.com', policy: 'two_factor', source: 'group-subject' },
+        { domain: 'family.example.com', policy: 'two_factor', source: 'group-placeholder' },
+      ])
+    })
+
     it('should not list deny rules as grants', () => {
       const config = {
         access_control: {
@@ -618,6 +638,28 @@ describe('buildAccessPreviews', () => {
       ])
     })
 
+    it('should let a deny with an empty subject decide its domain for every group', () => {
+      const config = {
+        access_control: {
+          rules: [
+            {
+              domain: 'vault.example.com',
+              subject: null,
+              resources: null,
+              policy: 'deny',
+            },
+            { domain: 'vault.example.com', subject: 'group:family', policy: 'one_factor' },
+            { domain: 'vault.example.com', subject: 'group:guests', policy: 'one_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family', 'guests'])
+
+      expect(previewFor(previews, 'family').domains).toEqual([])
+      expect(previewFor(previews, 'guests').domains).toEqual([])
+    })
+
     it('should honour a deny that follows the grant', () => {
       const config = {
         access_control: {
@@ -677,6 +719,46 @@ describe('buildAccessPreviews', () => {
 
       expect(previewFor(previews, 'media').domains).toEqual([])
       expect(previewFor(previews, 'media').notes).toHaveLength(1)
+    })
+
+    it('should note a domain with {group} mid-label and grant nothing', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain: 'app-{group}.example.com', policy: 'two_factor' },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family', 'guests'])
+
+      for (const group of ['family', 'guests']) {
+        const preview = previewFor(previews, group)
+        expect(preview.domains).toEqual([])
+        expect(preview.notes).toHaveLength(1)
+        expect(preview.notes[0]).toContain('app-{group}.example.com')
+      }
+    })
+
+    it('should note a deny that names only a domain_regex for the groups it names', () => {
+      const config = {
+        access_control: {
+          rules: [
+            { domain_regex: '^vault\\.example\\.com$', subject: 'group:family', policy: 'deny' },
+            {
+              domain: 'vault.example.com',
+              subject: ['group:family', 'group:guests'],
+              policy: 'one_factor',
+            },
+          ],
+        },
+      }
+
+      const previews = buildAccessPreviews(config, ['family', 'guests'])
+
+      expect(previewFor(previews, 'family').notes).toHaveLength(1)
+      expect(previewFor(previews, 'family').notes[0]).toContain('domain_regex')
+      expect(previewFor(previews, 'guests').notes).toEqual([])
     })
 
     it('should ignore non-group rules with qualifiers entirely', () => {
