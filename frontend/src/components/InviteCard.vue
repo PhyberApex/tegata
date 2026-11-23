@@ -227,12 +227,20 @@ const view = computed<VariantView>(() => {
   padding: var(--tg-space-lg);
 }
 
-.invite-card--used {
-  opacity: 0.6;
+/* Dimmed by surface and badge colour, not opacity, so every label still passes 4.5:1. */
+.invite-card--used,
+.invite-card--expired {
+  background: var(--tg-bg-base);
 }
 
 .invite-card--expired {
-  opacity: 0.4;
+  border-style: dashed;
+}
+
+.invite-card--used .tg-badge,
+.invite-card--expired .tg-badge {
+  background: var(--tg-bg-overlay);
+  color: var(--tg-text-secondary);
 }
 
 .invite-info {
@@ -271,11 +279,11 @@ const view = computed<VariantView>(() => {
 }
 
 .invite-email-failed {
-  color: var(--tg-danger);
+  color: var(--tg-danger-text);
 }
 
 .invite-expired {
-  color: var(--tg-danger);
+  color: var(--tg-danger-text);
 }
 
 .invite-actions {

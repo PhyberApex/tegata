@@ -84,7 +84,7 @@ defineEmits<{ revoke: [], send: [], copy: [] }>()
 
 .reset-link-email-failed {
   font-size: var(--tg-font-xs);
-  color: var(--tg-danger);
+  color: var(--tg-danger-text);
   margin: 0;
 }
 </style>

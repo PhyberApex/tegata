@@ -18,5 +18,9 @@ export default defineConfig({
       exclude: ['src/**/*.d.ts', 'src/**/*.spec.ts'],
     },
     environment: 'happy-dom',
+    // Without this Vitest stubs tokens.css to an empty string, and the contrast spec reads it.
+    css: {
+      include: [/tokens\.css/],
+    },
   },
 })

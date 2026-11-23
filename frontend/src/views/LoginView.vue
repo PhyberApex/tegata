@@ -205,7 +205,7 @@ async function handleLogin() {
 }
 
 .login-error {
-  color: var(--tg-danger);
+  color: var(--tg-danger-text);
   font-size: var(--tg-font-sm);
   margin: 0;
 }

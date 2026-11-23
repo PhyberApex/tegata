@@ -241,7 +241,7 @@ async function handleReset() {
 }
 
 .reset-error {
-  color: var(--tg-danger);
+  color: var(--tg-danger-text);
   font-size: var(--tg-font-sm);
   margin: 0;
 }
