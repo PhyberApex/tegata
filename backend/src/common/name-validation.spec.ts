@@ -1,9 +1,13 @@
 import { ArgumentMetadata, BadRequestException, ValidationPipe } from '@nestjs/common'
+import { IsString, validate } from 'class-validator'
 import { describe, expect, it } from 'vitest'
 import { BundlesController, CreateBundleDto, UpdateBundleDto } from '../bundles/bundles.controller'
-import { CreateGroupDto, GroupsController } from '../groups/groups.controller'
+import { CreateGroupDto, DeleteGroupDto, GroupsController } from '../groups/groups.controller'
 import { CreateInviteDto, RedeemInviteDto } from '../invites/invites.controller'
-import { CreateUserDto, UpdateUserDto } from '../users/users.controller'
+import { UpdateProfileDto } from '../profile/profile.controller'
+import { CreateResetTokenDto } from '../reset-tokens/reset-tokens.controller'
+import { CreateUserDto, DeleteUserDto, UpdateUserDto } from '../users/users.controller'
+import { IsOptionalNotNull } from './name-validation'
 
 const pipe = new ValidationPipe({ whitelist: true, transform: true })
 function run(metatype: new () => object, body: object) {
@@ -23,6 +27,96 @@ const redeem = {
   email: 'b@x.io',
   password: 'password1',
 }
+
+describe('isOptionalNotNull', () => {
+  class Probe {
+    @IsOptionalNotNull()
+    @IsString()
+    value?: string | null
+  }
+
+  function probe(value?: string | null) {
+    return validate(Object.assign(new Probe(), value === undefined
+      ? {}
+      : { value }))
+  }
+
+  it('rejects null', async () => {
+    expect(await probe(null)).toHaveLength(1)
+  })
+
+  it('admits an omitted value and still validates a present one', async () => {
+    expect(await probe()).toHaveLength(0)
+    expect(await probe('x')).toHaveLength(0)
+    expect(await probe(1 as unknown as string)).toHaveLength(1)
+  })
+})
+
+describe('optional DTO fields refuse JSON null', () => {
+  const dtos: { dto: new () => object, base: object, fields: string[] }[] = [
+    {
+      dto: UpdateUserDto,
+      base: {},
+      fields: [
+        'displayname',
+        'email',
+        'groups',
+        'disabled',
+        'confirm',
+      ],
+    },
+    {
+      dto: DeleteUserDto,
+      base: {},
+      fields: ['confirm'],
+    },
+    {
+      dto: UpdateProfileDto,
+      base: {},
+      fields: ['displayname', 'email'],
+    },
+    {
+      dto: CreateGroupDto,
+      base: { name: 'g' },
+      fields: ['description'],
+    },
+    {
+      dto: DeleteGroupDto,
+      base: {},
+      fields: ['confirm'],
+    },
+    {
+      dto: CreateBundleDto,
+      base: { name: 'b' },
+      fields: ['description', 'groups'],
+    },
+    {
+      dto: CreateInviteDto,
+      base: { groups: [] },
+      fields: [
+        'expiresInDays',
+        'email',
+        'displayname',
+        'bundleName',
+        'sendEmail',
+      ],
+    },
+    {
+      dto: CreateResetTokenDto,
+      base: { username: 'bob' },
+      fields: ['expiresInDays', 'sendEmail'],
+    },
+  ]
+  const cases = dtos.flatMap(({ dto, base, fields }) => fields.map(field => ({ name: dto.name, field, dto, base })))
+
+  it.each(cases)('$name answers 400 for a null $field', async ({ field, dto, base }) => {
+    await expect(run(dto, { ...base, [field]: null })).rejects.toBeInstanceOf(BadRequestException)
+  })
+
+  it.each(cases)('$name still accepts $field omitted', async ({ field, dto, base }) => {
+    expect((await run(dto, base))[field]).toBeUndefined()
+  })
+})
 
 describe('name-like DTO validation', () => {
   const blanks = ['', '   ', '\t\n']

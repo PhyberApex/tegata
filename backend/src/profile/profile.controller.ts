@@ -1,17 +1,17 @@
 import type { OwnProfile } from '@tegata/shared'
 import { Body, Controller, Get, NotFoundException, Patch, Post, Req, ServiceUnavailableException, UnauthorizedException, UseGuards } from '@nestjs/common'
 import { Throttle } from '@nestjs/throttler'
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
+import { IsEmail, IsString, MinLength } from 'class-validator'
 import { ProfileGuard, ProfileRequest } from '../auth/profile.guard'
-import { IsTrimmedNonEmpty } from '../common/name-validation'
+import { IsOptionalNotNull, IsTrimmedNonEmpty } from '../common/name-validation'
 import { UsersService } from '../users/users.service'
 
-class UpdateProfileDto {
-  @IsOptional()
+export class UpdateProfileDto {
+  @IsOptionalNotNull()
   @IsTrimmedNonEmpty()
   displayname?: string
 
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsEmail()
   email?: string
 }

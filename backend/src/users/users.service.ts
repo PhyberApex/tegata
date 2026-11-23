@@ -590,9 +590,12 @@ export class UsersService implements OnModuleInit {
 
   updateUser(
     username: string,
-    updates: { displayname?: string, email?: string, groups?: string[], disabled?: boolean },
+    requested: { displayname?: string | null, email?: string | null, groups?: string[] | null, disabled?: boolean | null },
     confirm = false,
   ) {
+    // A null reaching here past the DTOs must not blank a required field or flip `disabled`; it means "unchanged".
+    const updates: { displayname?: string, email?: string, groups?: string[], disabled?: boolean }
+      = Object.fromEntries(Object.entries(requested).filter(([, value]) => value !== null))
     const user = this.mutateDatabase((db) => {
       const user = this.findUserOrThrow(db, username)
       // Only a changed address is checked, so a duplicate already on file never blocks an unrelated edit.

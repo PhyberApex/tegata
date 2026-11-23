@@ -144,6 +144,11 @@ describe('profile over HTTP', () => {
     expect(usersService.updateUser).not.toHaveBeenCalled()
   })
 
+  it.each(['displayname', 'email'])('should answer 400 to a null %s and change nothing', async (field) => {
+    expect((await send('PATCH', '/profile', { [field]: null })).status).toBe(400)
+    expect(usersService.updateUser).not.toHaveBeenCalled()
+  })
+
   it('should store a displayname with its surrounding whitespace trimmed', async () => {
     expect((await send('PATCH', '/profile', { displayname: '  Alice  ' })).status).toBe(200)
     expect(usersService.updateUser).toHaveBeenCalledWith('bob', { displayname: 'Alice' })

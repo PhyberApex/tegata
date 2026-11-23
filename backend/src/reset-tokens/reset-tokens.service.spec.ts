@@ -147,6 +147,26 @@ describe('resetTokensService', () => {
       expect(expiresAt).toBeLessThanOrEqual(Date.now() + 24 * 60 * 60 * 1000)
     })
 
+    it('should default to a 1-day expiry for a null expiresInDays', async () => {
+      mockUsersService.userExists.mockReturnValue(true)
+      mockGet.mockReturnValue({
+        id: 'uuid-id-1',
+        token: 'uuid-token-1',
+        username: 'bob',
+        expires_at: '2099-01-01T00:00:00.000Z',
+        used_at: null,
+        created_at: '2024-01-01T00:00:00.000Z',
+      })
+      const before = Date.now()
+
+      await service.createResetToken('bob', null)
+
+      const insertCall = mockRun.mock.calls.find(call => call[0] === 'uuid-id-1')!
+      const expiresAt = new Date(insertCall[3] as string).getTime()
+      expect(expiresAt).toBeGreaterThanOrEqual(before + 24 * 60 * 60 * 1000)
+      expect(expiresAt).toBeLessThanOrEqual(Date.now() + 24 * 60 * 60 * 1000)
+    })
+
     it('should not send email when sendEmail is false', async () => {
       mockUsersService.userExists.mockReturnValue(true)
       mockGet.mockReturnValue({

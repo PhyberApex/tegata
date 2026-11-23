@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common'
-import { IsBoolean, IsEmail, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator'
+import { IsBoolean, IsEmail, IsInt, IsString, Max, Min, MinLength } from 'class-validator'
 import { AuthGuard } from '../auth/auth.guard'
-import { IsGroupList, IsTrimmedNonEmpty } from '../common/name-validation'
+import { IsGroupList, IsOptionalNotNull, IsTrimmedNonEmpty } from '../common/name-validation'
 import { IsUsername } from '../config/username-pattern'
 import { InvitesService, isPendingInvite } from './invites.service'
 
@@ -9,25 +9,25 @@ export class CreateInviteDto {
   @IsGroupList()
   groups!: string[]
 
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsInt()
   @Min(1)
   @Max(90)
   expiresInDays?: number
 
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsEmail()
   email?: string
 
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsTrimmedNonEmpty()
   displayname?: string
 
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsString()
   bundleName?: string
 
-  @IsOptional()
+  @IsOptionalNotNull()
   @IsBoolean()
   sendEmail?: boolean
 }
