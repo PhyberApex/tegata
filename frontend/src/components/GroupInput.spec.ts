@@ -51,7 +51,7 @@ describe('groupInput inside a form', () => {
 
   it('removes a group on × without submitting the form', async () => {
     const { wrapper, groups, onSubmit } = mountInForm(['admins', 'family'])
-    await clickButton(wrapper, 'button[aria-label="Remove group"]')
+    await clickButton(wrapper, 'button[aria-label="Remove group admins"]')
     expect(groups.value).toEqual(['family'])
     expect(onSubmit).not.toHaveBeenCalled()
   })
@@ -89,5 +89,43 @@ describe('groupInput inside a form', () => {
     expect(groups.value).toEqual(['admins'])
     expect(wrapper.findComponent(GroupInput).emitted('update:modelValue')).toBeUndefined()
     expect(input.element.value).toBe('')
+  })
+})
+
+// Removing a chip unmounts its focused button; focus must land on a sibling
+// control, not fall to <body>, so a keyboard user keeps their place.
+describe('groupInput remove buttons', () => {
+  async function removeByKeyboard(wrapper: ReturnType<typeof mountInForm>['wrapper'], group: string) {
+    const button = wrapper.find<HTMLButtonElement>(`button[aria-label="Remove group ${group}"]`)
+    expect(button.exists()).toBe(true)
+    button.element.focus()
+    button.element.click()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+  }
+
+  it('names each button after its group', () => {
+    const { wrapper } = mountInForm(['admins', 'family'])
+    const labels = wrapper.findAll('.group-remove').map(b => b.attributes('aria-label'))
+    expect(labels).toEqual(['Remove group admins', 'Remove group family'])
+  })
+
+  it('moves focus to the following chip after removing a middle one', async () => {
+    const { wrapper, groups } = mountInForm(['admins', 'family', 'friends'])
+    await removeByKeyboard(wrapper, 'family')
+    expect(groups.value).toEqual(['admins', 'friends'])
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Remove group friends')
+  })
+
+  it('moves focus to the previous chip after removing the last one', async () => {
+    const { wrapper } = mountInForm(['admins', 'family'])
+    await removeByKeyboard(wrapper, 'family')
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Remove group admins')
+  })
+
+  it('moves focus to the add input after removing the only chip', async () => {
+    const { wrapper } = mountInForm(['admins'])
+    await removeByKeyboard(wrapper, 'admins')
+    expect(document.activeElement).toBe(wrapper.find('input').element)
   })
 })
