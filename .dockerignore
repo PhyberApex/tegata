@@ -1,0 +1,21 @@
+# Keep local dev state, secrets and build output out of the build context:
+# a local `docker build` would otherwise bake them into the image.
+.git
+.github
+.claude
+.idea
+.vscode
+**/.DS_Store
+**/node_modules
+**/dist
+**/coverage
+**/.env*
+!**/.env.example
+
+# Local development state (docker-compose.dev.yml, `pnpm dev`)
+backend/tegata.db*
+backend/users_database.yml
+dev-authelia-config
+
+docs
+site
