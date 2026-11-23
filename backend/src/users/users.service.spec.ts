@@ -1234,7 +1234,7 @@ users:
       ['a scalar entry', 'is not a mapping', 'users:\n  bob: x\n'],
       ['an array entry', 'is not a mapping', 'users:\n  bob:\n    - x\n'],
       ['a scalar groups value', 'has a groups value that is not a list of strings', 'users:\n  bob:\n    displayname: Bob\n    password: h\n    email: b@x\n    groups: admins\n'],
-      ['a groups list with a non-string member', 'has a groups value that is not a list of strings', 'users:\n  bob:\n    displayname: Bob\n    password: h\n    email: b@x\n    groups: [admins, 3]\n'],
+      ['a groups list with a non-string member', 'has a groups value that is not a list of strings', 'users:\n  bob:\n    displayname: Bob\n    password: h\n    email: b@x\n    groups: [admins, true]\n'],
     ])('a user entry with %s', (_label, problem, content) => {
       beforeEach(() => {
         readFileSyncMock.mockReturnValue(content)
