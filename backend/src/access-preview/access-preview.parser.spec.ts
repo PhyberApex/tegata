@@ -678,30 +678,127 @@ describe('buildAccessPreviews', () => {
       expect(previewFor(previews, 'media').oidcClients).toEqual([])
     })
 
-    it('should surface unparsed policy rules that reference groups as notes', () => {
-      const oddConfig = {
+    function policyConfig(rules: unknown[]) {
+      return {
         identity_providers: {
           oidc: {
             authorization_policies: {
-              odd: {
-                rules: [
-                  {
-                    policy: 'two_factor',
-                    subject: ['group:media', 'user:bob'],
-                  },
-                ],
-              },
+              home: { default_policy: 'deny', rules },
             },
-            clients: [],
+            clients: [
+              { client_id: 'app', client_name: 'App', authorization_policy: 'home' },
+            ],
           },
         },
       }
+    }
 
-      const previews = buildAccessPreviews(oddConfig, ['media'])
+    it('should grant every group of an OR-list subject without a note', () => {
+      const previews = buildAccessPreviews(policyConfig([
+        {
+          policy: 'one_factor',
+          subject: ['group:family', 'group:media'],
+        },
+      ]), ['family', 'media'])
+
+      for (const group of ['family', 'media']) {
+        expect(previewFor(previews, group).oidcClients).toEqual([
+          { clientName: 'App', policyName: 'home', policy: 'one_factor' },
+        ])
+        expect(previewFor(previews, group).notes).toEqual([])
+      }
+    })
+
+    it('should grant the group of an OR-list that also names a user', () => {
+      const previews = buildAccessPreviews(policyConfig([
+        {
+          policy: 'two_factor',
+          subject: ['group:media', 'user:bob'],
+        },
+      ]), ['media'])
+
+      expect(previewFor(previews, 'media').oidcClients).toEqual([
+        { clientName: 'App', policyName: 'home', policy: 'two_factor' },
+      ])
+      expect(previewFor(previews, 'media').notes).toEqual([])
+    })
+
+    it('should let an OR-list decide its groups for later rules', () => {
+      const previews = buildAccessPreviews(policyConfig([
+        {
+          policy: 'two_factor',
+          subject: ['group:family', 'group:media'],
+        },
+        { policy: 'one_factor', subject: 'group:family' },
+      ]), ['family', 'media'])
+
+      expect(previewFor(previews, 'family').oidcClients).toEqual([
+        { clientName: 'App', policyName: 'home', policy: 'two_factor' },
+      ])
+    })
+
+    it('should not grant or decide a group through an allow rule scoped to networks', () => {
+      const networkConfig = policyConfig([
+        {
+          policy: 'one_factor',
+          subject: 'group:family',
+          networks: ['10.0.0.0/8'],
+        },
+        { policy: 'deny', subject: 'group:family' },
+        {
+          policy: 'one_factor',
+          subject: 'group:media',
+          networks: ['10.0.0.0/8'],
+        },
+        { policy: 'two_factor', subject: 'group:media' },
+      ])
+
+      const previews = buildAccessPreviews(networkConfig, ['family', 'media'])
+
+      expect(previewFor(previews, 'family').oidcClients).toEqual([])
+      expect(previewFor(previews, 'family').notes).toHaveLength(1)
+      expect(previewFor(previews, 'family').notes[0]).toContain('home')
+      expect(previewFor(previews, 'media').oidcClients).toEqual([
+        { clientName: 'App', policyName: 'home', policy: 'two_factor' },
+      ])
+      expect(previewFor(previews, 'media').notes).toHaveLength(1)
+    })
+
+    it('should surface an inner AND subject as a note only', () => {
+      const previews = buildAccessPreviews(policyConfig([
+        {
+          policy: 'two_factor',
+          subject: [
+            ['group:media', 'user:bob'],
+          ],
+        },
+      ]), ['media'])
 
       expect(previewFor(previews, 'media').oidcClients).toEqual([])
       expect(previewFor(previews, 'media').notes).toHaveLength(1)
-      expect(previewFor(previews, 'media').notes[0]).toContain('odd')
+      expect(previewFor(previews, 'media').notes[0]).toContain('home')
+    })
+
+    it('should not note a later unparsed rule for a group an earlier rule decided', () => {
+      const previews = buildAccessPreviews(policyConfig([
+        { policy: 'one_factor', subject: 'group:media' },
+        {
+          policy: 'two_factor',
+          subject: 'group:media',
+          networks: ['10.0.0.0/8'],
+        },
+        {
+          policy: 'two_factor',
+          subject: [
+            ['group:media', 'user:bob'],
+          ],
+        },
+      ]), ['media'])
+
+      expect(previewFor(previews, 'media').oidcClients).toEqual([
+        { clientName: 'App', policyName: 'home', policy: 'one_factor' },
+      ])
+      expect(previewFor(previews, 'media').notes).toEqual([])
     })
   })
 

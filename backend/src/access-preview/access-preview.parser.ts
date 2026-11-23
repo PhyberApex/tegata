@@ -304,12 +304,19 @@ function collectAccessRuleGrants(rules: AccessRule[], knownGroups: string[], pre
 
 // first-match like access_control: a group an earlier rule matched as a whole —
 // deny or grant — is decided, and no later rule in the policy is consulted for it
-function decidePolicyRule(rule: any, rulePolicy: string, decided: Set<string>, policyGrants: Map<string, string>): void {
-  for (const group of wholeSubjectGroups(rule?.subject).filter(g => !decided.has(g))) {
+function decidePolicyRule(wholeGroups: string[], rulePolicy: string, decided: Set<string>, policyGrants: Map<string, string>): void {
+  for (const group of wholeGroups.filter(g => !decided.has(g))) {
     decided.add(group)
     if (rulePolicy !== 'deny')
       policyGrants.set(group, rulePolicy)
   }
+}
+
+// a group an earlier rule decided is never consulted again, so the note would be noise
+function applyUnparsedPolicyNotes(rule: any, policyName: string, decided: Set<string>, previewFor: PreviewFor): void {
+  const undecided = subjectGroups(flattenSubjects(rule?.subject)).filter(g => !decided.has(g))
+  for (const group of new Set(undecided))
+    previewFor(group).notes.push(`Unparsed rule in OIDC policy "${policyName}": ${describeRule(rule)}`)
 }
 
 function collectPolicyRuleGrants(policyRules: any[], policyName: string, previewFor: PreviewFor): Map<string, string> {
@@ -320,20 +327,19 @@ function collectPolicyRuleGrants(policyRules: any[], policyName: string, preview
     const rulePolicy = typeof rule?.policy === 'string'
       ? rule.policy
       : 'unknown'
-    // a deny scoped to some networks still lets every other request through
-    if (rulePolicy === 'deny') {
-      if (rule?.networks === undefined)
-        decidePolicyRule(rule, rulePolicy, decided, policyGrants)
+    // a rule scoped to some networks matches only part of a group's requests,
+    // so it neither grants nor decides the group — every other request falls
+    // through to later rules
+    if (rule?.networks !== undefined) {
+      applyUnparsedPolicyNotes(rule, policyName, decided, previewFor)
       continue
     }
-    const subjects = flattenSubjects(rule?.subject)
-    const groups = subjectGroups(subjects)
-    if (isSingleGroupSubject(subjects, groups)) {
-      decidePolicyRule(rule, rulePolicy, decided, policyGrants)
-      continue
-    }
-    for (const group of new Set(groups))
-      previewFor(group).notes.push(`Unparsed rule in OIDC policy "${policyName}": ${describeRule(rule)}`)
+    const wholeGroups = wholeSubjectGroups(rule?.subject)
+    // a deny never unlocks anything, so one naming no whole group is no news;
+    // a grant naming groups only inside an AND list can't be modeled
+    if (rulePolicy !== 'deny' && wholeGroups.length === 0)
+      applyUnparsedPolicyNotes(rule, policyName, decided, previewFor)
+    decidePolicyRule(wholeGroups, rulePolicy, decided, policyGrants)
   }
 
   return policyGrants
