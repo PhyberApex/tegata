@@ -11,6 +11,10 @@ const emit = defineEmits<{ 'update:modelValue': [groups: string[]] }>()
 const listId = useId()
 const newGroup = ref('')
 
+// A value typed or picked from the datalist but never "added" would otherwise
+// be dropped when the modal is submitted. The input's change event fires on
+// blur, before the submit button's click, so the input also commits
+// the pending value on change.
 function addGroup(group: string) {
   const trimmed = group.trim()
   if (trimmed && !props.modelValue.includes(trimmed)) {
@@ -48,6 +52,7 @@ function handleKeydown(e: KeyboardEvent) {
         placeholder="Add group..."
         :list="listId"
         @keydown="handleKeydown"
+        @change="addGroup(newGroup)"
       >
       <datalist :id="listId">
         <option

@@ -1,3 +1,4 @@
+import type { DOMWrapper } from '@vue/test-utils'
 import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
@@ -28,6 +29,13 @@ function clickButton(wrapper: ReturnType<typeof mountInForm>['wrapper'], selecto
   return wrapper.vm.$nextTick()
 }
 
+// setValue() also fires change, so fill the box with input events only — as
+// typing, or picking a datalist suggestion, does until the input loses focus.
+function typeWithoutCommitting(input: DOMWrapper<HTMLInputElement>, value: string) {
+  input.element.value = value
+  return input.trigger('input')
+}
+
 afterEach(() => {
   document.body.innerHTML = ''
 })
@@ -46,5 +54,36 @@ describe('groupInput inside a form', () => {
     await clickButton(wrapper, 'button[aria-label="Remove group"]')
     expect(groups.value).toEqual(['family'])
     expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('adds a group on Enter without submitting the form', async () => {
+    const { wrapper, groups, onSubmit } = mountInForm([])
+    const input = wrapper.find('input')
+    await input.setValue('admins')
+    await input.trigger('keydown', { key: 'Enter' })
+    expect(groups.value).toEqual(['admins'])
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  // Picking from the datalist only fills the text box; clicking the modal's
+  // submit button blurs the input, and its change event fires before submit.
+  it('commits a pending group on change, before the form is submitted', async () => {
+    const { wrapper, groups } = mountInForm(['family'])
+    const input = wrapper.find('input')
+    await typeWithoutCommitting(input, 'admins')
+    expect(groups.value).toEqual(['family'])
+    await input.trigger('change')
+    expect(groups.value).toEqual(['family', 'admins'])
+    expect(input.element.value).toBe('')
+  })
+
+  it('emits nothing and clears the box when the pending group is a duplicate', async () => {
+    const { wrapper, groups } = mountInForm(['admins'])
+    const input = wrapper.find('input')
+    await typeWithoutCommitting(input, ' admins ')
+    await input.trigger('change')
+    expect(groups.value).toEqual(['admins'])
+    expect(wrapper.findComponent(GroupInput).emitted('update:modelValue')).toBeUndefined()
+    expect(input.element.value).toBe('')
   })
 })
