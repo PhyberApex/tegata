@@ -30,6 +30,8 @@ async function bootApp(trustProxy: string, passwordHash: string): Promise<Booted
   const usersFile = join(dir, 'users_database.yml')
   writeFileSync(usersFile, 'users: {}\n')
 
+  // Pinned so a developer's backend/.env cannot change what the image would do
+  vi.stubEnv('NODE_ENV', 'production')
   vi.stubEnv('TRUST_PROXY', trustProxy)
   vi.stubEnv('TEGATA_ADMIN_PASSWORD_HASH', passwordHash)
   vi.stubEnv('TEGATA_JWT_SECRET', JWT_SECRET)
@@ -64,7 +66,8 @@ function login(baseUrl: string, forwardedFor: string, body: unknown): Promise<Re
   })
 }
 
-function methods(baseUrl: string, forwardedFor: string): Promise<Response> {
+/** `GET /api/auth/methods` as if relayed by a proxy for `forwardedFor`. */
+function authMethods(baseUrl: string, forwardedFor: string): Promise<Response> {
   return fetch(`${baseUrl}/api/auth/methods`, {
     headers: { 'x-forwarded-for': forwardedFor },
   })
@@ -91,7 +94,7 @@ describe('the booted app behind one trusted proxy hop (TRUST_PROXY=1)', () => {
   // counts each case's requests in a bucket of its own.
 
   it('reads a public X-Forwarded-For as the caller and does not offer native login', async () => {
-    const res = await methods(app.baseUrl, '8.8.8.8')
+    const res = await authMethods(app.baseUrl, '8.8.8.8')
 
     expect(res.status).toBe(200)
     expect(((await res.json()) as { nativePasswordLogin: boolean }).nativePasswordLogin).toBe(false)
@@ -117,7 +120,7 @@ describe('the booted app behind one trusted proxy hop (TRUST_PROXY=1)', () => {
     expect(res.status).toBe(400)
   })
 
-  it('sets an HttpOnly, SameSite=Strict session cookie on a successful login', async () => {
+  it('sets an HttpOnly, SameSite=Strict, Secure session cookie on a successful login', async () => {
     const res = await login(app.baseUrl, '10.0.0.8', { password: PASSWORD })
 
     expect(res.status).toBe(201)
@@ -125,10 +128,11 @@ describe('the booted app behind one trusted proxy hop (TRUST_PROXY=1)', () => {
     expect(cookie).toBeDefined()
     expect(cookie).toMatch(/;\s*HttpOnly/i)
     expect(cookie).toMatch(/;\s*SameSite=Strict/i)
+    expect(cookie).toMatch(/;\s*Secure/i)
   })
 
   it('sends helmet\'s security headers', async () => {
-    const res = await methods(app.baseUrl, '10.0.0.9')
+    const res = await authMethods(app.baseUrl, '10.0.0.9')
 
     expect(res.headers.get('x-content-type-options')).toBe('nosniff')
     expect(res.headers.get('content-security-policy')).toContain('default-src \'self\'')
@@ -147,7 +151,7 @@ describe('the booted app with no trusted proxy (TRUST_PROXY=0)', () => {
   })
 
   it('ignores X-Forwarded-For and offers native login to the loopback caller', async () => {
-    const res = await methods(app.baseUrl, '8.8.8.8')
+    const res = await authMethods(app.baseUrl, '8.8.8.8')
 
     expect(res.status).toBe(200)
     expect(((await res.json()) as { nativePasswordLogin: boolean }).nativePasswordLogin).toBe(true)
