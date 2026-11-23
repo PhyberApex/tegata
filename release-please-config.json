@@ -7,7 +7,8 @@
       "extra-files": [
         { "type": "generic", "path": "README.md" },
         { "type": "generic", "path": "docker-compose.yml" },
-        { "type": "generic", "path": "examples/docker-compose.traefik.yml" }
+        { "type": "generic", "path": "examples/docker-compose.traefik.yml" },
+        { "type": "generic", "path": "site/index.html" }
       ]
     }
   }
