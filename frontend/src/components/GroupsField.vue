@@ -24,8 +24,6 @@ const groups = defineModel<string[]>('groups', { required: true })
   <BundlePicker v-model="groups" :bundles="bundles" @apply="name => emit('apply', name)" />
   <div class="tg-form-field">
     <label :id="labelId" :for="inputId" class="tg-form-label">{{ label }}</label>
-    <div role="group" :aria-labelledby="labelId">
-      <GroupInput v-model="groups" :available-groups="availableGroups" :input-id="inputId" />
-    </div>
+    <GroupInput v-model="groups" :available-groups="availableGroups" :input-id="inputId" :labelled-by="labelId" />
   </div>
 </template>

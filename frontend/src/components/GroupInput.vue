@@ -6,6 +6,8 @@ const props = defineProps<{
   availableGroups: string[]
   /** Id for the add input, so a parent's <label for> can name it. */
   inputId?: string
+  /** Id of the element naming the field, so the chip list reads as one labelled group. */
+  labelledBy?: string
 }>()
 
 const emit = defineEmits<{ 'update:modelValue': [groups: string[]] }>()
@@ -51,7 +53,7 @@ function handleKeydown(e: KeyboardEvent) {
 
 <template>
   <div class="group-input">
-    <div v-if="modelValue.length" class="group-tags">
+    <div v-if="modelValue.length" class="group-tags" role="group" :aria-labelledby="labelledBy">
       <span v-for="g in modelValue" :key="g" class="tg-badge group-tag">
         {{ g }}
         <button

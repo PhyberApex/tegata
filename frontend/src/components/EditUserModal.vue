@@ -47,10 +47,9 @@ const form = defineModel<EditUserForm>('form', { required: true })
       </div>
       <GroupsField v-model:groups="form.groups" :bundles="bundles" :available-groups="availableGroups" />
       <div class="tg-form-field">
-        <!-- A heading, not a <label>: the panel below is not a form control. -->
-        <h3 class="tg-form-label effective-access-title">
-          Effective Access
-        </h3>
+        <!-- Not a <label>: the panel below is not a form control. Not a heading
+             either: the panel's own h3 sections sit directly under the modal's h2. -->
+        <span class="tg-form-label">Effective Access</span>
         <EffectiveAccessPanel :result="effectiveAccess" />
       </div>
       <FormError :message="error" />
@@ -70,9 +69,3 @@ const form = defineModel<EditUserForm>('form', { required: true })
     @cancel="$emit('accessDiffCancel')"
   />
 </template>
-
-<style scoped>
-.effective-access-title {
-  margin: 0;
-}
-</style>

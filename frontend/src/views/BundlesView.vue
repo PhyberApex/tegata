@@ -149,9 +149,7 @@ async function handleDelete() {
     >
       <div class="tg-form-field">
         <label id="bundle-groups-label" for="bundle-groups" class="tg-form-label">Groups</label>
-        <div role="group" aria-labelledby="bundle-groups-label">
-          <GroupInput v-model="form.groups" :available-groups="groups" input-id="bundle-groups" />
-        </div>
+        <GroupInput v-model="form.groups" :available-groups="groups" input-id="bundle-groups" labelled-by="bundle-groups-label" />
       </div>
     </EntityFormModal>
 

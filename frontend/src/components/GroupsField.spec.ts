@@ -47,11 +47,10 @@ describe('groupsField labels', () => {
     expect(document.body.querySelector(`label[for="${input.id}"]`)?.textContent?.trim()).toBe('Invite groups')
   })
 
-  it('groups the chips and add input under the label', () => {
+  it('groups the chip list under the label', () => {
     wrapper = mountField()
     const group = document.body.querySelector<HTMLElement>('[role="group"]')!
     expect(group).not.toBeNull()
-    expect(group.querySelector('.group-add-input')).not.toBeNull()
     expect(group.querySelector('.group-tag')).not.toBeNull()
     const labelledBy = group.getAttribute('aria-labelledby')!
     expect(document.getElementById(labelledBy)?.textContent?.trim()).toBe('Groups')

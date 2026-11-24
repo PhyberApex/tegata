@@ -66,8 +66,13 @@ describe('editUserModal labels', () => {
 
   it('labels the disabled username input', () => {
     wrapper = mountModal()
-    const input = document.body.querySelector<HTMLInputElement>('input[disabled]')!
+    const label = [
+      ...document.body.querySelectorAll('label'),
+    ]
+      .find(l => l.textContent?.trim() === 'Username')!
+    const input = document.getElementById(label.htmlFor) as HTMLInputElement
     expect(input.value).toBe('jdoe')
+    expect(input.disabled).toBe(true)
     expect(labelFor(input)).toBe('Username')
   })
 
@@ -77,12 +82,13 @@ describe('editUserModal labels', () => {
     expect(labelFor(input)).toBe('Groups')
   })
 
-  it('titles the Effective Access panel with a heading rather than a label', () => {
+  it('titles the Effective Access panel without a <label>, since it is not a control', () => {
     wrapper = mountModal()
-    const heading = [
-      ...document.body.querySelectorAll('h1,h2,h3,h4,h5,h6'),
+    const title = [
+      ...document.body.querySelectorAll('.tg-form-label'),
     ]
-      .find(h => h.textContent?.trim() === 'Effective Access')
-    expect(heading).toBeDefined()
+      .find(el => el.textContent?.trim() === 'Effective Access')
+    expect(title).toBeDefined()
+    expect(title!.tagName).not.toBe('LABEL')
   })
 })
