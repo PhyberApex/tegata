@@ -49,7 +49,7 @@ async function handleAcceptBaseline() {
   justify-content: center;
   gap: var(--tg-space-lg);
   padding: var(--tg-space-sm) var(--tg-space-xl);
-  background: rgba(234, 179, 8, 0.15);
+  background: var(--tg-warning-muted);
   color: var(--tg-warning);
   border-bottom: 1px solid var(--tg-warning);
   font-size: var(--tg-font-sm);
@@ -58,12 +58,12 @@ async function handleAcceptBaseline() {
 
 .integrity-banner--unreadable {
   background: var(--tg-danger-muted);
-  color: var(--tg-danger);
+  color: var(--tg-danger-text);
   border-bottom-color: var(--tg-danger);
 }
 
 .integrity-banner-error {
-  color: var(--tg-danger);
+  color: var(--tg-danger-text);
 }
 
 .integrity-banner-action {

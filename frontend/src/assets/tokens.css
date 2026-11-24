@@ -8,23 +8,30 @@
   /* ── Borders ── */
   --tg-border: #1e293b;
   --tg-border-strong: #334155;
+  /* A form-control boundary needs 3:1 against both the field and the surface around it. */
+  --tg-border-input: #64748b;
 
   /* ── Text ── */
   --tg-text-primary: #e2e8f0;
   --tg-text-secondary: #94a3b8;
-  --tg-text-muted: #64748b;
+  --tg-text-muted: #8291a7;
 
   /* ── Accent (ice blue) ── */
   --tg-accent: #0ea5e9;
   --tg-accent-hover: #38bdf8;
   --tg-accent-muted: rgba(14, 165, 233, 0.15);
+  /* Light text on the accent cannot reach 4.5:1. */
+  --tg-accent-ink: #04121c;
 
   /* ── Semantic ── */
   --tg-success: #22c55e;
   --tg-warning: #eab308;
+  --tg-warning-muted: rgba(234, 179, 8, 0.15);
   --tg-danger: #ef4444;
   --tg-danger-hover: #dc2626;
   --tg-danger-muted: rgba(239, 68, 68, 0.15);
+  /* --tg-danger as text falls under 4.5:1 on the raised and overlay surfaces. */
+  --tg-danger-text: #f87171;
 
   /* ── Spacing ── */
   --tg-space-xs: 0.25rem;
@@ -72,7 +79,7 @@ body {
 .tg-input {
   padding: var(--tg-space-sm) var(--tg-space-md);
   background: var(--tg-bg-input);
-  border: 1px solid var(--tg-border);
+  border: 1px solid var(--tg-border-input);
   border-radius: var(--tg-radius-md);
   color: var(--tg-text-primary);
   font-size: var(--tg-font-base);
@@ -112,7 +119,8 @@ body {
 
 .tg-btn-primary {
   background: var(--tg-accent);
-  color: #fff;
+  color: var(--tg-accent-ink);
+  font-weight: 600;
 }
 
 .tg-btn-primary:hover {
@@ -121,12 +129,12 @@ body {
 
 .tg-btn-danger {
   background: var(--tg-danger-muted);
-  color: var(--tg-danger);
+  color: var(--tg-danger-text);
   border-color: var(--tg-danger);
 }
 
 .tg-btn-danger:hover {
-  background: var(--tg-danger);
+  background: var(--tg-danger-hover);
   color: #fff;
 }
 
@@ -161,7 +169,7 @@ body {
 
 .tg-badge-danger {
   background: var(--tg-danger-muted);
-  color: var(--tg-danger);
+  color: var(--tg-danger-text);
 }
 
 /* ── Form layout ── */
@@ -193,13 +201,13 @@ body {
 }
 
 .tg-form-error {
-  color: var(--tg-danger);
+  color: var(--tg-danger-text);
   font-size: var(--tg-font-sm);
   margin: 0;
 }
 
 .tg-error {
-  color: var(--tg-danger);
+  color: var(--tg-danger-text);
   font-size: var(--tg-font-sm);
 }
 
@@ -247,7 +255,7 @@ body {
   text-align: left;
   font-size: var(--tg-font-xs);
   font-weight: 600;
-  color: var(--tg-text-muted);
+  color: var(--tg-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: var(--tg-space-sm) var(--tg-space-md);
@@ -309,7 +317,7 @@ body {
 }
 
 .tg-access-section-title--removed {
-  color: var(--tg-danger);
+  color: var(--tg-danger-text);
 }
 
 .tg-access-list {

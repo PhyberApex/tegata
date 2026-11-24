@@ -2,6 +2,7 @@ import type { Invite } from '../types'
 import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import InviteCard from './InviteCard.vue'
+import inviteCardSource from './InviteCard.vue?raw'
 
 function makeInvite(overrides: Partial<Invite> = {}): Invite {
   return {
@@ -46,5 +47,44 @@ describe('inviteCard timestamps', () => {
 
     expect(created).toBe(emailed)
     expect(created).toContain('01:34 PM')
+  })
+})
+
+// Card-level opacity dims the enabled Remove button and the meta text below WCAG 4.5:1.
+describe('inviteCard dimmed variants', () => {
+  const style = inviteCardSource.match(/<style[^>]*>([\s\S]*?)<\/style>/)![1]!.replace(/\/\*[\s\S]*?\*\//g, '')
+  const rules = [
+    ...style.matchAll(/([^{}]+)\{([^{}]*)\}/g),
+  ]
+    .map(([, selector, body]) => ({
+      selector: selector!.trim(),
+      body: body!,
+    }))
+
+  it.each(['used', 'expired'] as const)('the %s variant applies no opacity to the actions container or its ancestors', (variant) => {
+    const wrapper = mount(InviteCard, {
+      props: {
+        invite: makeInvite({ used_by: 'bob', used_at: '2026-11-01T00:00:00.000Z' }),
+        variant,
+        copiedId: null,
+        sendingId: null,
+      },
+    })
+
+    const classes = new Set(wrapper.classes())
+    const actions = wrapper.find('.invite-actions')
+    if (actions.exists())
+      actions.classes().forEach(c => classes.add(c))
+    expect(classes).toContain(`invite-card--${variant}`)
+
+    const applying = rules.filter(({ selector }) => selector.split(',').some((s) => {
+      const selectorClasses = [
+        ...s.matchAll(/\.([\w-]+)/g),
+      ].map(m => m[1]!)
+      return selectorClasses.length > 0 && selectorClasses.every(c => classes.has(c))
+    }))
+    expect(applying.flatMap(r => r.selector.split(',').map(s => s.trim()))).toContain(`.invite-card--${variant}`)
+    for (const rule of applying)
+      expect(rule.body, rule.selector).not.toMatch(/opacity/)
   })
 })
