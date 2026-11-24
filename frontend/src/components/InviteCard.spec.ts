@@ -43,10 +43,27 @@ describe('inviteCard timestamps', () => {
     })
 
     const created = wrapper.find('.invite-created').text().replace(/^Created /, '')
-    const emailed = wrapper.find('.invite-email-sent').attributes('title')?.replace(/^Emailed /, '')
+    const emailed = wrapper.find('.invite-email-sent').text().replace(/^✓ Emailed /, '')
 
     expect(created).toBe(emailed)
     expect(created).toContain('01:34 PM')
+  })
+})
+
+// The failure reason must be readable without hovering: keyboard, touch and
+// most screen-reader users never see hover-only text.
+describe('inviteCard email status', () => {
+  it('shows the reason an email failed as visible text', () => {
+    const wrapper = mount(InviteCard, {
+      props: {
+        invite: makeInvite({ email_sent_at: null, email_error: 'boom' }),
+        variant: 'active',
+        copiedId: null,
+        sendingId: null,
+      },
+    })
+
+    expect(wrapper.text()).toContain('boom')
   })
 })
 
