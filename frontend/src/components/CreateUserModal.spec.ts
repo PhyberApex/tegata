@@ -1,6 +1,7 @@
 import type { CreateUserForm } from '../types/forms'
 import { mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
 import { usernameRule } from '../composables/useRegisterForm'
 import CreateUserModal from './CreateUserModal.vue'
 
@@ -60,5 +61,23 @@ describe('createUserModal username validation', () => {
     wrapper = mountModal(username)
     expect(usernameInput().getAttribute('aria-invalid')).toBeNull()
     expect(describedBy()!.textContent!.trim()).toBe(usernameRule())
+  })
+
+  it('inserts a fresh alert node when the username turns invalid, so the live region fires', async () => {
+    wrapper = mountModal('john')
+    const before = describedBy()
+    await wrapper.setProps({
+      form: {
+        username: 'Bad Name!',
+        displayname: '',
+        email: '',
+        password: '',
+        groups: [],
+      },
+    })
+    await nextTick()
+    const after = describedBy()
+    expect(after).not.toBe(before)
+    expect(after!.getAttribute('role')).toBe('alert')
   })
 })
