@@ -31,9 +31,14 @@ defineEmits<{ revoke: [], send: [], copy: [] }>()
   <p v-if="token.email_sent_at" class="reset-link-email-sent">
     ✓ Emailed {{ new Date(token.email_sent_at).toLocaleString() }}
   </p>
-  <p v-else-if="token.email_error" class="reset-link-email-failed" :title="token.email_error">
-    ✗ Email failed — share the link directly
-  </p>
+  <template v-else-if="token.email_error">
+    <p class="reset-link-email-failed">
+      ✗ Email failed — share the link directly
+    </p>
+    <p class="reset-link-email-error">
+      {{ token.email_error }}
+    </p>
+  </template>
   <p v-else-if="emailPending" class="reset-link-email-pending">
     Sending…
   </p>
@@ -86,5 +91,12 @@ defineEmits<{ revoke: [], send: [], copy: [] }>()
   font-size: var(--tg-font-xs);
   color: var(--tg-danger-text);
   margin: 0;
+}
+
+.reset-link-email-error {
+  font-size: var(--tg-font-xs);
+  color: var(--tg-text-secondary);
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 </style>

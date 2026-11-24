@@ -7,7 +7,6 @@ import { timeUntilExpiry } from '../utils/time'
 interface MetaItem {
   key: string
   class: string
-  title?: string
   text?: string
   prefix?: string
   strong?: string
@@ -65,16 +64,14 @@ function emailStatusItem(): MetaItem | null {
     return {
       key: 'email-status',
       class: 'invite-email-sent',
-      text: '✓ Emailed',
-      title: `Emailed ${formatDate(props.invite.email_sent_at)}`,
+      text: `✓ Emailed ${formatDate(props.invite.email_sent_at)}`,
     }
   }
   if (props.invite.email_error) {
     return {
       key: 'email-status',
       class: 'invite-email-failed',
-      text: '✗ Email failed',
-      title: props.invite.email_error,
+      text: `✗ Email failed: ${props.invite.email_error}`,
     }
   }
   if (props.emailPending)
@@ -199,7 +196,7 @@ const view = computed<VariantView>(() => {
         <span v-for="g in invite.groups" :key="g" class="tg-badge">{{ g }}</span>
       </div>
       <div class="invite-meta">
-        <span v-for="item in view.metaItems" :key="item.key" :class="item.class" :title="item.title">
+        <span v-for="item in view.metaItems" :key="item.key" :class="item.class">
           <template v-if="item.strong !== undefined">{{ item.prefix }}<strong>{{ item.strong }}</strong></template>
           <template v-else>{{ item.text }}</template>
         </span>
@@ -257,6 +254,7 @@ const view = computed<VariantView>(() => {
 
 .invite-meta {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--tg-space-lg);
   font-size: var(--tg-font-xs);
   color: var(--tg-text-muted);
@@ -280,6 +278,7 @@ const view = computed<VariantView>(() => {
 
 .invite-email-failed {
   color: var(--tg-danger-text);
+  overflow-wrap: anywhere;
 }
 
 .invite-expired {
