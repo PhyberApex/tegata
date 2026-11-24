@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { Bundle } from '../types'
 import type { CreateUserForm } from '../types/forms'
-import { usernameError, usernameRule } from '../composables/useRegisterForm'
+import { computed } from 'vue'
+import { usernameFieldError, usernameRule } from '../composables/useRegisterForm'
 import FormActions from './FormActions.vue'
 import FormError from './FormError.vue'
 import GroupsField from './GroupsField.vue'
@@ -17,6 +18,8 @@ defineProps<{
 defineEmits<{ submit: [], close: [] }>()
 
 const form = defineModel<CreateUserForm>('form', { required: true })
+
+const usernameMessage = computed(() => usernameFieldError(form.value.username))
 </script>
 
 <template>
@@ -24,8 +27,20 @@ const form = defineModel<CreateUserForm>('form', { required: true })
     <form class="tg-form" @submit.prevent="$emit('submit')">
       <div class="tg-form-field">
         <label for="create-username" class="tg-form-label">Username</label>
-        <input id="create-username" v-model="form.username" type="text" class="tg-input" required>
-        <p :class="usernameError(form.username) ? 'tg-form-error' : 'tg-form-hint'" :role="usernameError(form.username) ? 'alert' : undefined">
+        <input
+          id="create-username"
+          v-model="form.username"
+          type="text"
+          class="tg-input"
+          :aria-invalid="usernameMessage ? 'true' : undefined"
+          aria-describedby="create-username-message"
+          required
+        >
+        <!-- v-if/v-else swaps the node, so the alert is inserted with its text and announced. -->
+        <p v-if="usernameMessage" id="create-username-message" class="tg-form-error" role="alert">
+          {{ usernameMessage }}
+        </p>
+        <p v-else id="create-username-message" class="tg-form-hint">
           {{ usernameRule() }}
         </p>
       </div>

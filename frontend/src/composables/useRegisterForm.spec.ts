@@ -1,7 +1,7 @@
 import type { RegisterFormFields } from './useRegisterForm'
 import { DEFAULT_USERNAME_PATTERN } from '@tegata/shared'
 import { describe, expect, it } from 'vitest'
-import { inviteFieldsPatch, passwordMatchError, usernameError, usernamePattern } from './useRegisterForm'
+import { inviteFieldsPatch, passwordMatchError, usernameError, usernameFieldError, usernamePattern, usernameRule } from './useRegisterForm'
 
 function form(overrides: Partial<RegisterFormFields> = {}): RegisterFormFields {
   return {
@@ -78,5 +78,18 @@ describe('usernameError', () => {
     usernamePattern.value = '^[a-zA-Z0-9]+$'
     expect(usernameError('John')).toBe('')
     usernamePattern.value = DEFAULT_USERNAME_PATTERN
+  })
+})
+
+describe('usernameFieldError', () => {
+  it('words an invalid username differently from the hint', () => {
+    const message = usernameFieldError('Bad Name!')
+    expect(message).toMatch(/^Invalid username: /)
+    expect(message).toContain(usernameRule())
+    expect(message).not.toBe(usernameRule())
+  })
+
+  it.each(['', 'john.doe'])('is empty for %j', (username) => {
+    expect(usernameFieldError(username)).toBe('')
   })
 })

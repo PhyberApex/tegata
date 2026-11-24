@@ -18,6 +18,18 @@ export function usernameError(username: string, pattern: string = usernamePatter
     : usernameRuleMessage(pattern)
 }
 
+/**
+ * The message a username field shows in place of its hint when the value breaks the rule.
+ * Worded differently from the hint, so the change is not carried by colour alone and the
+ * freshly inserted alert has new text to announce.
+ */
+export function usernameFieldError(username: string, pattern: string = usernamePattern.value): string {
+  const error = usernameError(username, pattern)
+  return error
+    ? `Invalid username: ${error}`
+    : ''
+}
+
 export interface InviteValidation {
   valid: boolean
   /** Why an invalid invite cannot be redeemed, when the server can say more than "invalid, expired, or used". */
