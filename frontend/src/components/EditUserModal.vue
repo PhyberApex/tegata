@@ -34,8 +34,8 @@ const form = defineModel<EditUserForm>('form', { required: true })
   <ModalOverlay title="Edit User" @close="$emit('close')">
     <form class="tg-form" @submit.prevent="$emit('submit')">
       <div class="tg-form-field">
-        <label class="tg-form-label">Username</label>
-        <input :value="form.username" type="text" class="tg-input" disabled>
+        <label for="edit-username" class="tg-form-label">Username</label>
+        <input id="edit-username" :value="form.username" type="text" class="tg-input" disabled>
       </div>
       <div class="tg-form-field">
         <label for="edit-displayname" class="tg-form-label">Display Name</label>
@@ -47,7 +47,9 @@ const form = defineModel<EditUserForm>('form', { required: true })
       </div>
       <GroupsField v-model:groups="form.groups" :bundles="bundles" :available-groups="availableGroups" />
       <div class="tg-form-field">
-        <label class="tg-form-label">Effective Access</label>
+        <!-- Not a <label>: the panel below is not a form control. Not a heading
+             either: the panel's own h3 sections sit directly under the modal's h2. -->
+        <span class="tg-form-label">Effective Access</span>
         <EffectiveAccessPanel :result="effectiveAccess" />
       </div>
       <FormError :message="error" />
