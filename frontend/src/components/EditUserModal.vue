@@ -34,8 +34,8 @@ const form = defineModel<EditUserForm>('form', { required: true })
   <ModalOverlay title="Edit User" @close="$emit('close')">
     <form class="tg-form" @submit.prevent="$emit('submit')">
       <div class="tg-form-field">
-        <label class="tg-form-label">Username</label>
-        <input :value="form.username" type="text" class="tg-input" disabled>
+        <label for="edit-username" class="tg-form-label">Username</label>
+        <input id="edit-username" :value="form.username" type="text" class="tg-input" disabled>
       </div>
       <div class="tg-form-field">
         <label for="edit-displayname" class="tg-form-label">Display Name</label>
@@ -47,7 +47,10 @@ const form = defineModel<EditUserForm>('form', { required: true })
       </div>
       <GroupsField v-model:groups="form.groups" :bundles="bundles" :available-groups="availableGroups" />
       <div class="tg-form-field">
-        <label class="tg-form-label">Effective Access</label>
+        <!-- A heading, not a <label>: the panel below is not a form control. -->
+        <h3 class="tg-form-label effective-access-title">
+          Effective Access
+        </h3>
         <EffectiveAccessPanel :result="effectiveAccess" />
       </div>
       <FormError :message="error" />
@@ -67,3 +70,9 @@ const form = defineModel<EditUserForm>('form', { required: true })
     @cancel="$emit('accessDiffCancel')"
   />
 </template>
+
+<style scoped>
+.effective-access-title {
+  margin: 0;
+}
+</style>
