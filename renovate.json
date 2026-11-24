@@ -41,6 +41,13 @@
         "dockerfile"
       ],
       "semanticCommitType": "fix"
+    },
+    {
+      "description": "TypeScript 7.0 ships no JavaScript compiler API, which typescript-eslint, vue-tsc and the Nest CLI all load, so 7.0.x cannot build this repo. 7.1 is the first release expected to carry one, and it should open a pull request by itself.",
+      "matchPackageNames": [
+        "typescript"
+      ],
+      "allowedVersions": "<7.0.0 || >=7.1.0"
     }
   ]
 }
