@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   id: string
   label: string
   type: 'text' | 'email' | 'password'
@@ -9,9 +11,11 @@ defineProps<{
   /** Set by the invite: read-only, dimmed, and tagged so the user knows why. */
   locked?: boolean
   hint?: string
-  /** Renders the hint as an error. */
-  invalid?: boolean
+  /** Shown in place of the hint, as an alert, while the value is invalid. */
+  error?: string
 }>()
+
+const messageId = computed(() => `${props.id}-message`)
 
 const value = defineModel<string>({ required: true })
 </script>
@@ -32,9 +36,15 @@ const value = defineModel<string>({ required: true })
       :autocomplete="autocomplete"
       :minlength="minlength"
       :readonly="locked"
+      :aria-invalid="error ? 'true' : undefined"
+      :aria-describedby="error || hint ? messageId : undefined"
       required
     >
-    <p v-if="hint" :class="invalid ? 'tg-form-error' : 'tg-form-hint'" :role="invalid ? 'alert' : undefined">
+    <!-- v-if/v-else swaps the node, so the alert is inserted with its text and announced. -->
+    <p v-if="error" :id="messageId" class="tg-form-error" role="alert">
+      {{ error }}
+    </p>
+    <p v-else-if="hint" :id="messageId" class="tg-form-hint">
       {{ hint }}
     </p>
   </div>

@@ -4,7 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import RegisterField from '../components/RegisterField.vue'
 import { useApi } from '../composables/useApi'
-import { inviteFieldsPatch, passwordMatchError, usernameError, usernameRule } from '../composables/useRegisterForm'
+import { inviteFieldsPatch, passwordMatchError, usernameError, usernameFieldError, usernameRule } from '../composables/useRegisterForm'
 import { siteName } from '../composables/useSiteName'
 
 const route = useRoute()
@@ -41,7 +41,7 @@ interface RegisterFieldSpec {
   minlength?: number
   locked?: boolean
   hint?: string
-  invalid?: boolean
+  error?: string
 }
 
 const fields = computed<RegisterFieldSpec[]>(() => [
@@ -53,7 +53,7 @@ const fields = computed<RegisterFieldSpec[]>(() => [
     placeholder: 'Choose a username',
     autocomplete: 'username',
     hint: usernameRule(),
-    invalid: Boolean(usernameError(form.value.username)),
+    error: usernameFieldError(form.value.username),
   },
   {
     key: 'displayname',
@@ -224,7 +224,7 @@ async function handleRegister() {
           :minlength="field.minlength"
           :locked="field.locked"
           :hint="field.hint"
-          :invalid="field.invalid"
+          :error="field.error"
         />
       </div>
 
