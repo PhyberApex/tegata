@@ -50,7 +50,8 @@ describe('inviteCard timestamps', () => {
   })
 })
 
-// A title attribute is hover-only, so keyboard, touch and most screen-reader users would never learn why sending failed.
+// The failure reason must be readable without hovering: keyboard, touch and
+// most screen-reader users never see hover-only text.
 describe('inviteCard email status', () => {
   it('shows the reason an email failed as visible text', () => {
     const wrapper = mount(InviteCard, {
