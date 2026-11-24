@@ -152,7 +152,7 @@ version tag; `:next` tracks `main`.
 ```yaml
 services:
   tegata:
-    image: ghcr.io/phyberapex/tegata:2.1.0 # x-release-please-version
+    image: ghcr.io/phyberapex/tegata:2.1.1 # x-release-please-version
     env_file: .env
     environment:
       - NODE_ENV=production

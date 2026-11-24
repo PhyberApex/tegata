@@ -1,5 +1,46 @@
 # Changelog
 
+## [2.1.1](https://github.com/PhyberApex/tegata/compare/v2.1.0...v2.1.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **a11y:** associate Edit User and group field labels with their controls ([#215](https://github.com/PhyberApex/tegata/issues/215)) ([28a8705](https://github.com/PhyberApex/tegata/commit/28a87051eb4eaf6fd587951b1a4dea39ca12682e))
+* **a11y:** describe username fields and announce a distinct invalid message ([#213](https://github.com/PhyberApex/tegata/issues/213)) ([308db84](https://github.com/PhyberApex/tegata/commit/308db84b51041be929ebb2f09956f1a911bd6d5b))
+* **a11y:** raise app colour tokens to WCAG contrast and stop dimming invite cards with opacity ([#211](https://github.com/PhyberApex/tegata/issues/211)) ([a8c5532](https://github.com/PhyberApex/tegata/commit/a8c553207aa21deb9499b39fae77a2df2a5c0a77))
+* **a11y:** show why an email failed, and when it was sent, as visible text ([#214](https://github.com/PhyberApex/tegata/issues/214)) ([9dfddf4](https://github.com/PhyberApex/tegata/commit/9dfddf4543f08f11eb169c03a7309d798ea1ece3))
+* **access-preview:** match OR-list subjects and skip network-scoped rules in OIDC authorization policies ([#196](https://github.com/PhyberApex/tegata/issues/196)) ([1e9040e](https://github.com/PhyberApex/tegata/commit/1e9040e186f9c9d113dd563b1ae8816b114e4702))
+* **access-preview:** match wildcard deny domains the way Authelia does ([#195](https://github.com/PhyberApex/tegata/issues/195)) ([40c4f4e](https://github.com/PhyberApex/tegata/commit/40c4f4e2c90f5b68d625a625c46a1ac38edc39f1))
+* **access-preview:** report a configuration.yml YAML error by position only, without the source snippet ([#198](https://github.com/PhyberApex/tegata/issues/198)) ([0d6b643](https://github.com/PhyberApex/tegata/commit/0d6b6439f6d115bce161c53db68de80c6415cf50))
+* **access-preview:** surface subjectless grants and an open access_control default_policy ([#197](https://github.com/PhyberApex/tegata/issues/197)) ([69daa7a](https://github.com/PhyberApex/tegata/commit/69daa7a0cea46e2412ce0ae4e35a5021ae1a1ab9))
+* **access-preview:** treat an empty deny subject as everyone, substitute {group} only as the leading label, and list one grant per domain ([#200](https://github.com/PhyberApex/tegata/issues/200)) ([0cf885f](https://github.com/PhyberApex/tegata/commit/0cf885f344274e383449539b192d03c52933eea1)), closes [#158](https://github.com/PhyberApex/tegata/issues/158)
+* **api:** never surface an empty error message for non-JSON or HTTP/2 error responses ([#206](https://github.com/PhyberApex/tegata/issues/206)) ([0f12c80](https://github.com/PhyberApex/tegata/commit/0f12c8027eec6093a3c5e6484dc56b9c1e004c1e))
+* **api:** refuse JSON null in optional DTO fields ([#188](https://github.com/PhyberApex/tegata/issues/188)) ([63f4518](https://github.com/PhyberApex/tegata/commit/63f4518b193640dc3329961a606ea6149e152e30))
+* **auth:** honour a NODE_ENV set only in .env for the Secure cookie flag ([#202](https://github.com/PhyberApex/tegata/issues/202)) ([9820585](https://github.com/PhyberApex/tegata/commit/9820585f66f9d8028ed08e5f42e337de5010785c))
+* **bundles:** clear a stale modal error when opening the Delete dialog ([#208](https://github.com/PhyberApex/tegata/issues/208)) ([3e7276a](https://github.com/PhyberApex/tegata/commit/3e7276a2e7812ff4393c099a03e936536842ec0d))
+* **config:** single-quote the argon2 hash in env_file, since Compose interpolates it ([#175](https://github.com/PhyberApex/tegata/issues/175)) ([b426bba](https://github.com/PhyberApex/tegata/commit/b426bba0efa3a0f08c200ff3ebc591cfe8a132b8))
+* **deps:** update dependency nodemailer to v10.6.1 ([#176](https://github.com/PhyberApex/tegata/issues/176)) ([85d7033](https://github.com/PhyberApex/tegata/commit/85d70336875ba0a4b0651d5eab5ec03b083e2b25))
+* **deps:** update dependency openid-client to v6.9.1 ([#177](https://github.com/PhyberApex/tegata/issues/177)) ([574c008](https://github.com/PhyberApex/tegata/commit/574c00829aa6d58e2be7dc8814dc984edb23f923))
+* **deps:** update dependency vue to v3.5.46 ([#180](https://github.com/PhyberApex/tegata/issues/180)) ([49feeb2](https://github.com/PhyberApex/tegata/commit/49feeb26042285dfbfaec0e3b04e710496ef559c))
+* **deps:** update nest monorepo ([#181](https://github.com/PhyberApex/tegata/issues/181)) ([e2342bd](https://github.com/PhyberApex/tegata/commit/e2342bda2ac6860aeca0953f6296fd7ed6363db7))
+* **deps:** update vitest monorepo to v5.1.1 ([#137](https://github.com/PhyberApex/tegata/issues/137)) ([db20ad9](https://github.com/PhyberApex/tegata/commit/db20ad96f9b51f5e26502f9b751b7bdbdcda988f))
+* **docker:** keep local dev secrets and state out of the image ([#178](https://github.com/PhyberApex/tegata/issues/178)) ([944c383](https://github.com/PhyberApex/tegata/commit/944c3838132f7f45292d176fc25c964b4234595b))
+* **groups:** commit a typed or picked group on change so submitting the form never drops it ([#209](https://github.com/PhyberApex/tegata/issues/209)) ([8a53e91](https://github.com/PhyberApex/tegata/commit/8a53e913298157d2cc319518dc0c1ad0b265700e))
+* **groups:** keep focus, name each remove button, and give it a 24px target ([#212](https://github.com/PhyberApex/tegata/issues/212)) ([7bb2990](https://github.com/PhyberApex/tegata/commit/7bb29908e81cf79c14390470ea24f3ddab59e113))
+* **invites,users:** show the background email outcome after create instead of a stale Send ([#205](https://github.com/PhyberApex/tegata/issues/205)) ([c85b931](https://github.com/PhyberApex/tegata/commit/c85b9315bc7d7420e4d1a56ebe433ee95b93e399))
+* **invites:** refuse an invite whose email prefill already belongs to a user ([#193](https://github.com/PhyberApex/tegata/issues/193)) ([60abf91](https://github.com/PhyberApex/tegata/commit/60abf910ea5380bb75e0fc1cfe7e9f1f2e56ef62))
+* **modal:** don't close on a text-selection drag released over the backdrop ([#210](https://github.com/PhyberApex/tegata/issues/210)) ([ea3c0f1](https://github.com/PhyberApex/tegata/commit/ea3c0f18dc1db0dc8e9ebfb77cf9faf6767f52f8))
+* **profile:** answer 422 instead of 401/500 when a user's stored hash is not argon2 ([#191](https://github.com/PhyberApex/tegata/issues/191)) ([b6944fc](https://github.com/PhyberApex/tegata/commit/b6944fc3e5e95d3d4b6e11f480bce3b15e9f0a98))
+* **profile:** pass only displayname and email to updateUser and narrow the PATCH response ([#194](https://github.com/PhyberApex/tegata/issues/194)) ([168cc62](https://github.com/PhyberApex/tegata/commit/168cc62074e1f822ab8b874d94f8c6dc3baa492f))
+* **register,reset:** offer a retry when link validation fails instead of calling the link invalid ([#207](https://github.com/PhyberApex/tegata/issues/207)) ([17088c8](https://github.com/PhyberApex/tegata/commit/17088c86fa2514bdfb019cbf8bcb14d41ad8d048))
+* **security:** drop upgrade-insecure-requests and HSTS when cookies are not Secure ([#201](https://github.com/PhyberApex/tegata/issues/201)) ([b1236b1](https://github.com/PhyberApex/tegata/commit/b1236b1e6a51f6934778d0e633adbcb2f8da2fe4))
+* **site:** keep landing-page version in step with releases and fix compose links ([#185](https://github.com/PhyberApex/tegata/issues/185)) ([243180b](https://github.com/PhyberApex/tegata/commit/243180be6aeabcfaeabb639cf1f94413e9132fd8))
+* **status:** report authelia.ok false when the users database is unreadable ([#199](https://github.com/PhyberApex/tegata/issues/199)) ([e9711da](https://github.com/PhyberApex/tegata/commit/e9711dae05561796d4ca593da0ff123c6014b149))
+* **users:** keep numeric-looking usernames and values as strings on read ([#189](https://github.com/PhyberApex/tegata/issues/189)) ([2f4cddf](https://github.com/PhyberApex/tegata/commit/2f4cddf9ca5969e4f30dff58f47ea08b552ad0de))
+* **users:** register a new user's groups under the write, after the password hash ([#192](https://github.com/PhyberApex/tegata/issues/192)) ([9e620db](https://github.com/PhyberApex/tegata/commit/9e620dbbd078919361d5187e3d8e1f93e438ed05))
+* **users:** report a malformed user entry as an unreadable database instead of crashing ([#190](https://github.com/PhyberApex/tegata/issues/190)) ([cbd5721](https://github.com/PhyberApex/tegata/commit/cbd57218e8ca9468ea73c8270899aa02905200ea))
+* **users:** send only changed fields when editing a user ([#204](https://github.com/PhyberApex/tegata/issues/204)) ([c441932](https://github.com/PhyberApex/tegata/commit/c4419328d290bfac15fe4275da44da1873454c87))
+
 ## [2.1.0](https://github.com/PhyberApex/tegata/compare/v2.0.2...v2.1.0) (2026-11-20)
 
 
